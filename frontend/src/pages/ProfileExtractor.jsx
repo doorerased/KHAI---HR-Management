@@ -199,7 +199,8 @@ const ProfileExtractor = () => {
       formData.append('realFilename', file.name);
 
       try {
-        const response = await fetch('http://localhost:3000/api/extract/profile', {
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+        const response = await fetch(`${apiUrl}/api/extract/profile`, {
           method: 'POST',
           body: formData,
         });

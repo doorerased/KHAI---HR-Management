@@ -125,7 +125,8 @@ const BankExtractor = () => {
         console.error('Failed to load master DB', e);
       }
 
-      const response = await fetch('http://localhost:3000/api/extract/bank', {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+      const response = await fetch(`${apiUrl}/api/extract/bank`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: inputText, dbNames, dbProfiles }),
