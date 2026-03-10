@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>frontend</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script>
+      window.addEventListener("error", function (e) {
+        document.body.innerHTML +=
+          '<div style="color:red; background: #fee; padding: 20px; z-index: 9999; position: absolute; top:0; left:0; right:0;">' +
+          e.message +
+          "<br>" +
+          e.filename +
+          ":" +
+          e.lineno +
+          "</div>";
+      });
+      window.addEventListener("unhandledrejection", function (e) {
+        document.body.innerHTML +=
+          '<div style="color:red; background: #fee; padding: 20px; z-index: 9999; position: absolute; top:0; left:0; right:0;">Promise Rejection: ' +
+          e.reason +
+          "</div>";
+      });
+    </script>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
