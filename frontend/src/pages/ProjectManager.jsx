@@ -185,21 +185,19 @@ const ProjectManager = () => {
       
       {activeView === 'dashboard' && (
         <>
-          <header className="mb-8 pb-6 border-b border-gray-100">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
+          <header className="mb-10 flex flex-col md:flex-row md:justify-between md:items-end pb-6 border-b border-gray-100">
+            <div>
+              <h2 className="text-2xl md:text-3xl font-black text-[#111827] tracking-tighter flex items-center gap-4">
                 <span className="p-2.5 bg-[#111827] text-white rounded-2xl shadow-[0_4px_14px_rgba(17,24,39,0.3)]">
                   <BriefcaseBusiness className="w-6 h-6" />
                 </span>
-                <div>
-                  <h2 className="text-2xl font-black text-[#111827] tracking-tight">프로젝트 관리</h2>
-                  <p className="text-gray-400 text-xs font-medium mt-0.5">위원 정보와 정산 정보를 통합하여 폴더별로 관리합니다.</p>
-                </div>
-              </div>
+                프로젝트 관리
+              </h2>
+              <p className="text-gray-400 mt-2 text-sm font-medium tracking-wide">위원 정보와 정산 정보를 통합하여 폴더별로 관리합니다.</p>
             </div>
             
-            <div className="flex items-center gap-3 mt-5">
-              <div className="relative flex-1 max-w-xs">
+            <div className="flex flex-col md:flex-row items-center gap-3 mt-4 md:mt-0">
+              <div className="relative w-full md:w-64">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <input
                   type="text"
@@ -209,7 +207,7 @@ const ProjectManager = () => {
                   placeholder="프로젝트 검색"
                 />
               </div>
-              <div className="flex items-center gap-2 ml-auto shrink-0">
+              <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto pb-1 md:pb-0">
                 <button 
                   onClick={() => setIsDataModalOpen(true)}
                   className="flex items-center whitespace-nowrap px-4 py-2 bg-white border border-gray-200 text-gray-600 font-bold rounded-full hover:bg-gray-50 transition-colors shadow-sm text-xs"
@@ -220,7 +218,7 @@ const ProjectManager = () => {
                 </button>
                 <button 
                   onClick={() => { resetModalFields(); setIsModalOpen(true); }}
-                  className="flex items-center whitespace-nowrap shrink-0 px-5 py-2 bg-[#FCC243] text-yellow-900 font-black rounded-full hover:bg-yellow-400 transition-colors shadow-sm text-xs"
+                  className="flex items-center whitespace-nowrap px-5 py-2 bg-[#FCC243] text-yellow-900 font-black rounded-full hover:bg-yellow-400 transition-colors shadow-sm text-xs"
                 >
                   <Plus className="w-4 h-4 mr-1" />
                   새 폴더
