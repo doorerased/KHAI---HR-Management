@@ -25,27 +25,26 @@ const Layout = () => {
           </div>
         </div>
         
-        <nav className="flex-1 py-8 px-6 space-y-3">
+        <nav className="flex-1 py-6 px-5 space-y-1.5">
           {navItems.map((item) => (
             <NavLink
               key={item.path}
               to={item.path}
               className={({ isActive }) =>
-                `relative flex items-center px-4 py-3 rounded-2xl text-[15px] font-bold transition-all duration-300 ${
+                `relative flex items-center px-4 py-3 rounded-2xl text-[13px] font-bold transition-all duration-300 whitespace-nowrap ${
                   isActive
-                    ? 'text-[#111827] bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)]'
+                    ? 'text-[#111827] bg-white shadow-[0_4px_20px_rgb(0,0,0,0.04)]'
                     : 'text-gray-400 hover:text-[#3C478F] hover:bg-white/50'
                 }`
               }
             >
               {({ isActive }) => (
                 <>
-                  {/* Active Indicator Line (Bauhaus Yellow) */}
                   {isActive && (
-                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-[#FCC243] rounded-r-full" />
+                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-[#FCC243] rounded-r-full" />
                   )}
-                  <span className={`mr-4 ${isActive ? 'text-[#3C478F]' : 'text-gray-400'}`}>
-                    {item.icon}
+                  <span className={`mr-3 ${isActive ? 'text-[#3C478F]' : 'text-gray-400'}`}>
+                    {React.cloneElement(item.icon, { className: 'w-4 h-4' })}
                   </span>
                   {item.label}
                 </>

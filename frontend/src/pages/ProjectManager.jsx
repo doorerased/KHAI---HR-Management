@@ -185,45 +185,47 @@ const ProjectManager = () => {
       
       {activeView === 'dashboard' && (
         <>
-          <header className="mb-10 flex flex-col md:flex-row md:justify-between md:items-end pb-6 border-b border-gray-100">
-            <div>
-              <h2 className="text-2xl md:text-3xl font-black text-[#111827] tracking-tighter flex items-center gap-4">
+          <header className="mb-8 pb-6 border-b border-gray-100">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
                 <span className="p-2.5 bg-[#111827] text-white rounded-2xl shadow-[0_4px_14px_rgba(17,24,39,0.3)]">
                   <BriefcaseBusiness className="w-6 h-6" />
                 </span>
-                프로젝트 관리
-              </h2>
-              <p className="text-gray-400 mt-2 text-sm font-medium tracking-wide">
-                폴더를 생성하여 위원들의 기본 정보와 정산 정보, 연락/안내 현황을 통합해서 관리할 수 있습니다.
-              </p>
+                <div>
+                  <h2 className="text-2xl font-black text-[#111827] tracking-tight">프로젝트 관리</h2>
+                  <p className="text-gray-400 text-xs font-medium mt-0.5">위원 정보와 정산 정보를 통합하여 폴더별로 관리합니다.</p>
+                </div>
+              </div>
             </div>
             
-            <div className="flex items-center space-x-4 mt-4 md:mt-0">
-               <div className="relative">
-                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                 <input
-                   type="text"
-                   value={searchQuery}
-                   onChange={(e) => setSearchQuery(e.target.value)}
-                   className="pl-10 pr-4 py-2 bg-[#F8F9FB] border border-gray-100 rounded-full text-sm font-bold focus:outline-none focus:ring-2 focus:ring-[#111827]/20 transition-all w-48 md:w-64"
-                   placeholder="프로젝트 검색"
-                 />
-               </div>
+            <div className="flex items-center gap-3 mt-5">
+              <div className="relative flex-1 max-w-xs">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 bg-[#F8F9FB] border border-gray-100 rounded-full text-sm font-bold focus:outline-none focus:ring-2 focus:ring-[#111827]/20 transition-all"
+                  placeholder="프로젝트 검색"
+                />
+              </div>
+              <div className="flex items-center gap-2 ml-auto shrink-0">
                 <button 
                   onClick={() => setIsDataModalOpen(true)}
-                  className="flex items-center px-4 py-2 bg-white border border-gray-200 text-gray-600 font-bold rounded-full hover:bg-gray-50 transition-colors shadow-sm text-sm"
+                  className="flex items-center whitespace-nowrap px-4 py-2 bg-white border border-gray-200 text-gray-600 font-bold rounded-full hover:bg-gray-50 transition-colors shadow-sm text-xs"
                   title="데이터 백업 및 복구"
                 >
-                  <Database className="w-4 h-4 mr-1.5 text-[#3C478F]" />
+                  <Database className="w-3.5 h-3.5 mr-1.5 text-[#3C478F]" />
                   데이터 관리
                 </button>
-               <button 
-                 onClick={() => setIsModalOpen(true)}
-                 className="flex items-center px-5 py-2.5 bg-[#FCC243] text-yellow-900 font-black rounded-full hover:bg-yellow-400 transition-colors shadow-sm"
-               >
-                 <Plus className="w-5 h-5 mr-1" />
-                 새 폴더
-               </button>
+                <button 
+                  onClick={() => { resetModalFields(); setIsModalOpen(true); }}
+                  className="flex items-center whitespace-nowrap shrink-0 px-5 py-2 bg-[#FCC243] text-yellow-900 font-black rounded-full hover:bg-yellow-400 transition-colors shadow-sm text-xs"
+                >
+                  <Plus className="w-4 h-4 mr-1" />
+                  새 폴더
+                </button>
+              </div>
             </div>
           </header>
 
@@ -233,9 +235,9 @@ const ProjectManager = () => {
                  <div className="w-20 h-20 bg-[#FAFAFA] rounded-full flex items-center justify-center mb-6">
                    <FolderOpen className="w-8 h-8 text-gray-300" />
                  </div>
-                 <p className="text-xl font-bold text-[#111827]">진행 중인 프로젝트가 없습니다.</p>
-                 <p className="text-sm mt-2 text-gray-500 text-center max-w-sm">'새 폴더' 버튼을 눌러 프로젝트를 생성한 후,<br/>위원 및 정산 정보를 연동해 보세요.</p>
-                  <button onClick={() => { resetModalFields(); setIsModalOpen(true); }} className="mt-8 px-6 py-2.5 bg-[#111827] text-white font-bold rounded-full shadow-md transition-colors">프로젝트 생성</button>
+                 <p className="text-lg font-bold text-[#111827]">진행 중인 프로젝트가 없습니다.</p>
+                 <p className="text-xs mt-2 text-gray-500 text-center max-w-xs">'새 폴더' 버튼을 눌러 프로젝트를 생성해 보세요.</p>
+                  <button onClick={() => { resetModalFields(); setIsModalOpen(true); }} className="mt-6 px-5 py-2 bg-[#111827] text-white font-bold rounded-full shadow-md transition-colors text-xs whitespace-nowrap">프로젝트 생성</button>
                </div>
             ) : (
                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
@@ -264,8 +266,8 @@ const ProjectManager = () => {
                        </div>
                      </div>
                      
-                     <h3 className="text-xl font-black text-[#111827] mb-2 truncate group-hover:text-[#3C478F] transition-colors">{project.name}</h3>
-                     <p className="text-sm text-gray-500 font-medium mb-6 line-clamp-2 h-10">
+                     <h3 className="text-lg font-black text-[#111827] mb-1.5 truncate group-hover:text-[#3C478F] transition-colors">{project.name}</h3>
+                     <p className="text-xs text-gray-500 font-medium mb-5 line-clamp-2 h-8 leading-relaxed">
                        {project.description || '설명 없음'}
                      </p>
                      
