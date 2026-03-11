@@ -1,3 +1,4 @@
+import React, { useState, useEffect } from 'react';
 import { BriefcaseBusiness, FolderOpen, Plus, Search, MoreVertical, Table as TableIcon, Users, Calendar, Trash2, ArrowLeft, CheckSquare, Square, Download, CheckCircle2, X, Link as LinkIcon, UploadCloud, FileType2, Loader2, RefreshCw, Database, ShieldCheck, AlertTriangle } from 'lucide-react';
 import { API_ENDPOINTS } from '../config/api';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -574,8 +575,21 @@ const ProjectDetailBoard = ({ project, onBack, onUpdateProject }) => {
   const handleAddSelectedProfiles = () => {
     const profilesToAdd = availableProfiles.filter(p => selectedProfileIds.includes(p.id));
     
-    setMembers([...members, ...newMembers]);
+    const newMembers = profilesToAdd.map(p => ({
+      id: p.id || `member_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+      name: p.name,
+      institution: project.institution || p.institution || '',
+      type: '',
+      field: '',
+      statusSelection: '대기',
+      birthDate: p.birth || p.birthDate || '',
+      phone: p.phone || '',
+      email: p.email || '',
+    }));
+    
+    setMembers(prev => [...prev, ...newMembers]);
     setIsAddModalOpen(false);
+    showToast(`${newMembers.length}명의 위원이 프로젝트에 추가되었습니다.`);
   };
 
   // --- 자동 추출 관련 핸들러 ---
