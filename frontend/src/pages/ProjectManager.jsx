@@ -1,4 +1,4 @@
-import { BriefcaseBusiness, FolderOpen, Plus, Search, MoreVertical, Table as TableIcon, Users, Calendar, Trash2, ArrowLeft, CheckSquare, Square, Download, CheckCircle2, X, Link as LinkIcon, UploadCloud, FileType2, Loader2, RefreshCw } from 'lucide-react';
+import { BriefcaseBusiness, FolderOpen, Plus, Search, MoreVertical, Table as TableIcon, Users, Calendar, Trash2, ArrowLeft, CheckSquare, Square, Download, CheckCircle2, X, Link as LinkIcon, UploadCloud, FileType2, Loader2, RefreshCw, Database, ShieldCheck, AlertTriangle } from 'lucide-react';
 import { API_ENDPOINTS } from '../config/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import * as XLSX from 'xlsx';
@@ -29,6 +29,10 @@ const ProjectManager = () => {
   const [newProjectDesc, setNewProjectDesc] = useState('');
   
   const [searchQuery, setSearchQuery] = useState('');
+
+  // 데이터 관리 모달 상태
+  const [isDataModalOpen, setIsDataModalOpen] = useState(false);
+  const [dataActionStatus, setDataActionStatus] = useState({ type: '', message: '' });
 
   // projects 변경 시 로컬 스토리지 저장
   useEffect(() => {
@@ -108,6 +112,66 @@ const ProjectManager = () => {
     (p.description && p.description.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
+  // --- 통합 데이터 백업 및 복구 로직 ---
+  const handleExportAllData = () => {
+    try {
+      const allData = {
+        khai_projects: JSON.parse(localStorage.getItem('khai_projects') || '[]'),
+        savedProfiles: JSON.parse(localStorage.getItem('savedProfiles') || '[]'),
+        savedBankInfos: JSON.parse(localStorage.getItem('savedBankInfos') || '[]'),
+        backupDate: new Date().toISOString(),
+        version: '1.0'
+      };
+      
+      const dataStr = JSON.stringify(allData, null, 2);
+      const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+      
+      const exportFileDefaultName = `KHAI_Backup_${new Date().toISOString().split('T')[0]}.json`;
+      
+      const linkElement = document.createElement('a');
+      linkElement.setAttribute('href', dataUri);
+      linkElement.setAttribute('download', exportFileDefaultName);
+      linkElement.click();
+      
+      setDataActionStatus({ type: 'success', message: '데이터 백업 파일이 생성되었습니다.' });
+    } catch (e) {
+      console.error('Backup failed', e);
+      setDataActionStatus({ type: 'error', message: '백업 중 오류가 발생했습니다.' });
+    }
+  };
+
+  const handleImportAllData = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const importedData = JSON.parse(event.target.result);
+        
+        if (!importedData.khai_projects && !importedData.savedProfiles && !importedData.savedBankInfos) {
+          throw new Error('유효한 백업 파일이 아닙니다.');
+        }
+
+        if (window.confirm('기존 데이터가 백업 파일 내용으로 대체됩니다. 계속하시겠습니까?')) {
+          if (importedData.khai_projects) {
+            localStorage.setItem('khai_projects', JSON.stringify(importedData.khai_projects));
+            setProjects(importedData.khai_projects);
+          }
+          if (importedData.savedProfiles) localStorage.setItem('savedProfiles', JSON.stringify(importedData.savedProfiles));
+          if (importedData.savedBankInfos) localStorage.setItem('savedBankInfos', JSON.stringify(importedData.savedBankInfos));
+          
+          setDataActionStatus({ type: 'success', message: '데이터 복구가 완료되었습니다. 페이지를 새로고침합니다.' });
+          setTimeout(() => window.location.reload(), 2000);
+        }
+      } catch (err) {
+        console.error('Import failed', err);
+        setDataActionStatus({ type: 'error', message: '복구 실패: 올바른 JSON 형식이 아닙니다.' });
+      }
+    };
+    reader.readAsText(file);
+  };
+
   return (
     <div className="min-h-full flex flex-col max-w-6xl mx-auto font-sans px-6 mt-10 pb-24">
       
@@ -137,6 +201,14 @@ const ProjectManager = () => {
                    placeholder="프로젝트 검색"
                  />
                </div>
+                <button 
+                  onClick={() => setIsDataModalOpen(true)}
+                  className="flex items-center px-4 py-2 bg-white border border-gray-200 text-gray-600 font-bold rounded-full hover:bg-gray-50 transition-colors shadow-sm text-sm"
+                  title="데이터 백업 및 복구"
+                >
+                  <Database className="w-4 h-4 mr-1.5 text-[#3C478F]" />
+                  데이터 관리
+                </button>
                <button 
                  onClick={() => setIsModalOpen(true)}
                  className="flex items-center px-5 py-2.5 bg-[#FCC243] text-yellow-900 font-black rounded-full hover:bg-yellow-400 transition-colors shadow-sm"
@@ -279,6 +351,76 @@ const ProjectManager = () => {
                 >
                   {modalMode === 'create' ? '폴더 생성하기' : '수정 완료'}
                 </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* 데이터 관리(백업/복구) 모달 */}
+      <AnimatePresence>
+        {isDataModalOpen && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-[#111827]/40 backdrop-blur-sm p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden"
+            >
+              <div className="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-[#F8F9FB]">
+                <h3 className="text-lg font-black text-[#111827] flex items-center">
+                  <ShieldCheck className="w-5 h-5 mr-2 text-[#3C478F]" /> 데이터 안전 관리
+                </h3>
+                <button onClick={() => { setIsDataModalOpen(false); setDataActionStatus({type:'', message:''}); }} className="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
+              </div>
+              <div className="p-6">
+                <div className="mb-6 p-4 bg-blue-50 rounded-2xl border border-blue-100">
+                  <p className="text-xs text-blue-700 font-bold leading-relaxed">
+                    <AlertTriangle className="w-3.5 h-3.5 inline mr-1 mb-0.5" /> 
+                    도메인이 바뀌거나 브라우저를 초기화하면 데이터가 유실될 수 있습니다. 정기적으로 백업 파일을 다운로드하여 보관하세요.
+                  </p>
+                </div>
+
+                <div className="space-y-4">
+                  <button 
+                    onClick={handleExportAllData}
+                    className="w-full flex items-center justify-between p-4 bg-white border border-gray-100 rounded-2xl hover:border-[#3C478F] hover:shadow-md transition-all group"
+                  >
+                    <div className="flex items-center">
+                      <div className="p-2.5 bg-gray-50 rounded-xl mr-4 group-hover:bg-blue-50 transition-colors">
+                        <Download className="w-5 h-5 text-gray-400 group-hover:text-[#3C478F]" />
+                      </div>
+                      <div className="text-left">
+                        <p className="font-bold text-[#111827] text-sm">내보내기 (백업)</p>
+                        <p className="text-xs text-gray-400 mt-0.5">현재 모든 정보를 파일로 저장합니다.</p>
+                      </div>
+                    </div>
+                  </button>
+
+                  <label className="w-full flex items-center justify-between p-4 bg-white border border-gray-100 rounded-2xl hover:border-[#FCC243] hover:shadow-md transition-all group cursor-pointer">
+                    <div className="flex items-center">
+                      <div className="p-2.5 bg-gray-50 rounded-xl mr-4 group-hover:bg-yellow-50 transition-colors">
+                        <UploadCloud className="w-5 h-5 text-gray-400 group-hover:text-yellow-600" />
+                      </div>
+                      <div className="text-left">
+                        <p className="font-bold text-[#111827] text-sm">가져오기 (복구)</p>
+                        <p className="text-xs text-gray-400 mt-0.5">백업 파일을 불러와 데이터를 복원합니다.</p>
+                      </div>
+                    </div>
+                    <input type="file" accept=".json" className="hidden" onChange={handleImportAllData} />
+                  </label>
+                </div>
+
+                {dataActionStatus.message && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+                    className={`mt-6 p-4 rounded-xl text-xs font-bold flex items-center ${dataActionStatus.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}
+                  >
+                    <CheckCircle2 className="w-4 h-4 mr-2" />
+                    {dataActionStatus.message}
+                  </motion.div>
+                )}
               </div>
             </motion.div>
           </motion.div>
@@ -1014,8 +1156,7 @@ const ProjectDetailBoard = ({ project, onBack, onUpdateProject }) => {
                     )}
                   </div>
                 </div>
-                )}
-              </div>
+              )}
 
               <div className="p-4 border-t border-gray-100 bg-gray-50 flex justify-between items-center">
                 {addModalTab === 'archive' ? (
@@ -1034,8 +1175,74 @@ const ProjectDetailBoard = ({ project, onBack, onUpdateProject }) => {
                   </>
                 ) : (
                   <div className="w-full flex justify-end">
-                    <button onClick={() => setIsAddModalOpen(false)} className="px-6 py-2 rounded-xl text-sm font-bold text-gray-600 bg-white border border-gray-200 hover:bg-gray-50 transition-colors">닫기</button>
+                    <button onClick={() => setIsAddModalOpen(false)} className="px-4 py-2 rounded-xl text-sm font-bold text-gray-600 bg-white border border-gray-200 hover:bg-gray-50 transition-colors">닫기</button>
                   </div>
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* 데이터 관리(백업/복구) 모달 */}
+      <AnimatePresence>
+        {isDataModalOpen && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-100 flex items-center justify-center bg-[#111827]/40 backdrop-blur-sm p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden"
+            >
+              <div className="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-[#F8F9FB]">
+                <h3 className="text-lg font-black text-[#111827] flex items-center">
+                  <ShieldCheck className="w-5 h-5 mr-2 text-[#3C478F]" /> 데이터 안전 관리
+                </h3>
+                <button onClick={() => { setIsDataModalOpen(false); setDataActionStatus({type:'', message:''}); }} className="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
+              </div>
+              <div className="p-6">
+                <div className="mb-6 p-4 bg-blue-50 rounded-2xl border border-blue-100">
+                  <p className="text-xs text-blue-700 font-bold leading-relaxed">
+                    <AlertTriangle className="w-3.5 h-3.5 inline mr-1 mb-0.5" /> 
+                    도메인이 바뀌거나 브라우저를 초기화하면 데이터가 유실될 수 있습니다. 정기적으로 백업 파일을 다운로드하여 보관하세요.
+                  </p>
+                </div>
+
+                <div className="space-y-4">
+                  <button 
+                    onClick={handleExportAllData}
+                    className="w-full flex items-center p-4 bg-white border border-gray-100 rounded-2xl hover:border-[#3C478F] hover:shadow-md transition-all group"
+                  >
+                    <div className="p-2.5 bg-gray-50 rounded-xl mr-4 group-hover:bg-blue-50 transition-colors">
+                      <Download className="w-5 h-5 text-gray-400 group-hover:text-[#3C478F]" />
+                    </div>
+                    <div className="text-left">
+                      <p className="font-bold text-[#111827] text-sm">내보내기 (백업)</p>
+                      <p className="text-xs text-gray-400 mt-0.5">현재 모든 정보를 파일로 저장합니다.</p>
+                    </div>
+                  </button>
+
+                  <label className="w-full flex items-center p-4 bg-white border border-gray-100 rounded-2xl hover:border-[#FCC243] hover:shadow-md transition-all group cursor-pointer">
+                    <div className="p-2.5 bg-gray-50 rounded-xl mr-4 group-hover:bg-yellow-50 transition-colors">
+                      <UploadCloud className="w-5 h-5 text-gray-400 group-hover:text-yellow-600" />
+                    </div>
+                    <div className="text-left">
+                      <p className="font-bold text-[#111827] text-sm">가져오기 (복구)</p>
+                      <p className="text-xs text-gray-400 mt-0.5">백업 파일을 불러와 데이터를 복원합니다.</p>
+                    </div>
+                    <input type="file" accept=".json" className="hidden" onChange={handleImportAllData} />
+                  </label>
+                </div>
+
+                {dataActionStatus.message && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+                    className={`mt-6 p-4 rounded-xl text-xs font-bold flex items-center ${dataActionStatus.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}
+                  >
+                    <CheckCircle2 className="w-4 h-4 mr-2" />
+                    {dataActionStatus.message}
+                  </motion.div>
                 )}
               </div>
             </motion.div>

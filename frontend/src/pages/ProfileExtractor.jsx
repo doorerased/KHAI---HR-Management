@@ -21,9 +21,13 @@ const ProfileExtractor = () => {
   const [archivedData, setArchivedData] = useState(() => {
     try {
       const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
-      return saved ? JSON.parse(saved) : [];
+      if (!saved) return [];
+      const parsed = JSON.parse(saved);
+      return Array.isArray(parsed) ? parsed : [];
     } catch (e) {
       console.error('Failed to parse saved profiles', e);
+      // 데이터가 깨진 경우 바로 초기화하지 않고 사용자에게 알릴 수 있도록 null 반환 고려 가능하나
+      // 여기서는 안전하게 기존 로직 유지하되 에러 로그를 명확히 남김
       return [];
     }
   });
@@ -87,9 +91,16 @@ const ProfileExtractor = () => {
     }
   }, []);
 
-  // archivedData 변경 시 로컬 스토리지 자동 저장
+  // archivedData 변경 시 로컬 스토리지 자동 저장 (용량 초과 에러 방지)
   useEffect(() => {
-    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(archivedData));
+    try {
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(archivedData));
+    } catch (e) {
+      console.error('LocalStorage save failed:', e);
+      if (e.name === 'QuotaExceededError' || e.code === 22) { // e.code === 22 for Safari/iOS
+        alert('⚠️ 브라우저 저장 공간이 가득 찼습니다. 데이터 관리에서 백업 후 불필요한 항목을 삭제해주세요.');
+      }
+    }
   }, [archivedData]);
 
   const saveToArchive = (newData) => {

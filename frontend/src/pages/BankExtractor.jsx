@@ -26,7 +26,9 @@ const BankExtractor = () => {
   const [archivedData, setArchivedData] = useState(() => {
     try {
       const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
-      return saved ? JSON.parse(saved) : [];
+      if (!saved) return [];
+      const parsed = JSON.parse(saved);
+      return Array.isArray(parsed) ? parsed : [];
     } catch (e) {
       console.error('Failed to parse saved bank infos', e);
       return [];
@@ -77,9 +79,16 @@ const BankExtractor = () => {
     }
   }, []);
 
-  // archivedData 변경 시 로컬 스토리지 자동 저장
+  // archivedData 변경 시 로컬 스토리지 자동 저장 (용량 초과 에러 방지)
   useEffect(() => {
-    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(archivedData));
+    try {
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(archivedData));
+    } catch (e) {
+      console.error('LocalStorage save failed:', e);
+      if (e.name === 'QuotaExceededError' || e.code === 22) {
+        alert('⚠️ 브라우저 저장 공간이 가득 찼습니다. 데이터 관리에서 백업 후 불필요한 항목을 삭제해주세요.');
+      }
+    }
   }, [archivedData]);
 
   // Ctrl+F 색인 단축키 및 Ctrl+S 저장 단축키 핸들러 (UI 알림용)
