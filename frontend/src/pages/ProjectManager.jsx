@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { BriefcaseBusiness, FolderOpen, Plus, Search, MoreVertical, Table as TableIcon, Users, Calendar, Trash2, ArrowLeft, CheckSquare, Square, Download, CheckCircle2, X, Link as LinkIcon, UploadCloud, FileType2, Loader2, RefreshCw, Database, ShieldCheck, AlertTriangle } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { BriefcaseBusiness, FolderOpen, Plus, Search, MoreVertical, Table as TableIcon, Users, Calendar, Trash2, ArrowLeft, CheckSquare, Square, Download, CheckCircle2, X, Link as LinkIcon, UploadCloud, Loader2, Database, ShieldCheck, AlertTriangle } from 'lucide-react';
 import { API_ENDPOINTS } from '../config/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import * as XLSX from 'xlsx';
@@ -35,9 +35,16 @@ const ProjectManager = () => {
   const [isDataModalOpen, setIsDataModalOpen] = useState(false);
   const [dataActionStatus, setDataActionStatus] = useState({ type: '', message: '' });
 
-  // projects 변경 시 로컬 스토리지 저장
+  // projects 변경 시 로컬 스토리지 저장 (용량 초과 에러 방지)
   useEffect(() => {
-    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(projects));
+    try {
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(projects));
+    } catch (e) {
+      console.error('LocalStorage save failed:', e);
+      if (e.name === 'QuotaExceededError' || e.code === 22) {
+        alert('⚠️ 브라우저 저장 공간이 가득 찼습니다. 데이터 관리에서 백업 후 불필요한 항목을 삭제해주세요.');
+      }
+    }
   }, [projects]);
 
   const handleCreateOrUpdateProject = () => {
@@ -432,9 +439,6 @@ const ProjectManager = () => {
   );
 };
 
-// 미지원 아이콘 임시 렌더링용
-const DatabaseIcon = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>;
-
 // 개별 상태(상황)들에 대한 색상 매핑
 const STATUS_COLORS = {
   '선정': 'bg-green-100 text-green-700',
@@ -456,7 +460,6 @@ const ProjectDetailBoard = ({ project, onBack, onUpdateProject }) => {
   const [selectedProfileIds, setSelectedProfileIds] = useState([]);
 
   // 자동 추출 관련 상태
-  const [uploadFiles, setUploadFiles] = useState([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [uploadError, setUploadError] = useState('');
   const [tempExtractedData, setTempExtractedData] = useState([]);
@@ -510,7 +513,8 @@ const ProjectDetailBoard = ({ project, onBack, onUpdateProject }) => {
 
   // --- 멤버 데이터 매핑 및 최신화 로직 (핵심) ---
   // 위원 정보/정산 정보 보관함에서 동일 '이름'의 데이터를 가져와 병합
-  const getMergedMembers = () => {
+  // useMemo로 캐싱하여 불필요한 localStorage 재파싱 방지
+  const currentMembers = useMemo(() => {
     let bankInfos = [];
     let profileInfos = [];
     try {
@@ -521,14 +525,11 @@ const ProjectDetailBoard = ({ project, onBack, onUpdateProject }) => {
     }
 
     return members.map(member => {
-      // 은행 정보 찾기 (이름 기준 단순 매칭)
       const matchedBank = bankInfos.find(b => b.name === member.name);
-      // 위원 프로필 정보 찾기 (이름 기준 단순 매칭)
       const matchedProfile = profileInfos.find(p => p.name === member.name);
       
       return {
         ...member,
-        // 보관함의 생년월일(birth)이 있으면 birthDate에 우선 순위로 병합
         birthDate: matchedProfile ? (matchedProfile.birth || matchedProfile.birthDate || member.birthDate) : member.birthDate || '',
         phone: matchedProfile ? (matchedProfile.phone || member.phone) : member.phone || '',
         email: matchedProfile ? (matchedProfile.email || member.email) : member.email || '',
@@ -537,17 +538,13 @@ const ProjectDetailBoard = ({ project, onBack, onUpdateProject }) => {
         residentId: matchedBank ? matchedBank.residentId : member.residentId || '정보 없음',
         incomeCategory: matchedBank ? matchedBank.incomeCategory : member.incomeCategory || '-',
       };
-    });
-  };
-
-  const currentMembers = getMergedMembers()
+    })
     .filter(m => 
       m.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      m.institution.toLowerCase().includes(searchQuery.toLowerCase())
+      (m.institution && m.institution.toLowerCase().includes(searchQuery.toLowerCase()))
     )
     .sort((a, b) => {
       if (sortConfig.key === 'statusSelection') {
-        // 선정 > 미선정 > 대기 순서로 임의 가중치 부여 또는 단순 문자열 정렬
         const weight = { '선정': 3, '미선정': 2, '대기': 1 };
         const valA = weight[a.statusSelection] || 0;
         const valB = weight[b.statusSelection] || 0;
@@ -555,6 +552,7 @@ const ProjectDetailBoard = ({ project, onBack, onUpdateProject }) => {
       }
       return 0;
     });
+  }, [members, searchQuery, sortConfig]);
 
   const requestSort = (key) => {
     let direction = 'asc';
@@ -611,7 +609,6 @@ const ProjectDetailBoard = ({ project, onBack, onUpdateProject }) => {
   };
 
   const handleFileUpload = async (selectedFiles) => {
-    setUploadFiles(selectedFiles);
     setIsAnalyzing(true);
     setUploadError('');
     setTempExtractedData([]);
@@ -657,7 +654,6 @@ const ProjectDetailBoard = ({ project, onBack, onUpdateProject }) => {
     if (!anySuccess) {
       setUploadError(`추출 실패: ${errorDetails.join(' / ')}`);
       setIsAnalyzing(false);
-      setUploadFiles([]);
     } else {
       if (errorDetails.length > 0) setUploadError(`일부 파일 실패: ${errorDetails.join(' / ')}`);
       setIsAnalyzing(false);
@@ -714,7 +710,6 @@ const ProjectDetailBoard = ({ project, onBack, onUpdateProject }) => {
       setIsAddModalOpen(false);
       setAddModalTab('archive');
       setTempExtractedData([]);
-      setUploadFiles([]);
     }, 1500);
   };
 
