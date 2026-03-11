@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { BriefcaseBusiness, FolderOpen, Plus, Search, MoreVertical, Table as TableIcon, Users, Calendar, Trash2, ArrowLeft, CheckSquare, Square, Download, CheckCircle2, X, Link as LinkIcon } from 'lucide-react';
+import { BriefcaseBusiness, FolderOpen, Plus, Search, MoreVertical, Table as TableIcon, Users, Calendar, Trash2, ArrowLeft, CheckSquare, Square, Download, CheckCircle2, X, Link as LinkIcon, UploadCloud, FileType2, Loader2, RefreshCw } from 'lucide-react';
+import { API_ENDPOINTS } from '../config/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import * as XLSX from 'xlsx';
 
@@ -308,8 +308,15 @@ const ProjectDetailBoard = ({ project, onBack, onUpdateProject }) => {
   
   // 위원 추가 모달 상태
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [addModalTab, setAddModalTab] = useState('archive'); // 'archive' | 'upload'
   const [availableProfiles, setAvailableProfiles] = useState([]);
   const [selectedProfileIds, setSelectedProfileIds] = useState([]);
+
+  // 자동 추출 관련 상태
+  const [uploadFiles, setUploadFiles] = useState([]);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [uploadError, setUploadError] = useState('');
+  const [tempExtractedData, setTempExtractedData] = useState([]);
 
   // 정렬 상태
   const [sortConfig, setSortConfig] = useState({ key: 'statusSelection', direction: 'desc' }); // 기본 선정여부 내림차순
@@ -425,16 +432,134 @@ const ProjectDetailBoard = ({ project, onBack, onUpdateProject }) => {
   const handleAddSelectedProfiles = () => {
     const profilesToAdd = availableProfiles.filter(p => selectedProfileIds.includes(p.id));
     
-    const newMembers = profilesToAdd.map(p => ({
-      ...p,
-      statusSelection: '대기',      
-      statusGuide: '미완료',         
-      statusReply: '미완료',         
-      statusRemind: '미완료',        
-    }));
-
     setMembers([...members, ...newMembers]);
     setIsAddModalOpen(false);
+  };
+
+  // --- 자동 추출 관련 핸들러 ---
+  const traverseFileTree = (entry) => {
+    return new Promise((resolve) => {
+      if (entry.isFile) {
+        entry.file(file => resolve([file]));
+      } else if (entry.isDirectory) {
+        const dirReader = entry.createReader();
+        dirReader.readEntries(async (entries) => {
+          const promises = entries.map(e => traverseFileTree(e));
+          const filesArrays = await Promise.all(promises);
+          resolve(filesArrays.flat());
+        });
+      } else {
+        resolve([]);
+      }
+    });
+  };
+
+  const handleFileUpload = async (selectedFiles) => {
+    setUploadFiles(selectedFiles);
+    setIsAnalyzing(true);
+    setUploadError('');
+    setTempExtractedData([]);
+    
+    let allData = [];
+    let anySuccess = false;
+    let errorDetails = [];
+
+    for (let i = 0; i < selectedFiles.length; i++) {
+      const file = selectedFiles[i];
+      const formData = new FormData();
+      const ext = file.name.split('.').pop();
+      formData.append('file', file, `safe_upload.${ext}`);
+      formData.append('realFilename', file.name);
+
+      try {
+        const response = await fetch(API_ENDPOINTS.EXTRACT_PROFILE, {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!response.ok) {
+          let errMessage = `HTTP ${response.status}`;
+          try {
+            const errData = await response.json();
+            if (errData && errData.error) errMessage = errData.error;
+          } catch (e) {}
+          errorDetails.push(`[${file.name}] ${errMessage}`);
+          continue;
+        }
+
+        const result = await response.json();
+        if (result.success && result.data) {
+          anySuccess = true;
+          allData = [...allData, ...result.data];
+          setTempExtractedData([...allData]);
+        }
+      } catch (err) {
+        errorDetails.push(`[${file.name}] ${err.message}`);
+      }
+    }
+
+    if (!anySuccess) {
+      setUploadError(`추출 실패: ${errorDetails.join(' / ')}`);
+      setIsAnalyzing(false);
+      setUploadFiles([]);
+    } else {
+      if (errorDetails.length > 0) setUploadError(`일부 파일 실패: ${errorDetails.join(' / ')}`);
+      setIsAnalyzing(false);
+      
+      // 추출 성공 시 데이터 병합 및 저장
+      if (allData.length > 0) {
+        handleSaveExtractedToProjectAndArchive(allData);
+      }
+    }
+  };
+
+  const handleSaveExtractedToProjectAndArchive = (extractedData) => {
+    // 1. 전역 보관함(savedProfiles)에 저장
+    try {
+      const globalProfiles = JSON.parse(localStorage.getItem('savedProfiles') || '[]');
+      const newGlobalProfiles = [...globalProfiles];
+      
+      extractedData.forEach(newItem => {
+        const existingIdx = newGlobalProfiles.findIndex(p => p.name === newItem.name);
+        if (existingIdx >= 0) {
+          newGlobalProfiles[existingIdx] = { ...newGlobalProfiles[existingIdx], ...newItem, updatedAt: Date.now() };
+        } else {
+          newGlobalProfiles.push({ ...newItem, id: `profile_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`, createdAt: Date.now() });
+        }
+      });
+      localStorage.setItem('savedProfiles', JSON.stringify(newGlobalProfiles));
+      // 보관함 목록 갱신
+      setAvailableProfiles(newGlobalProfiles);
+    } catch (e) {
+      console.error('Failed to update global profiles', e);
+    }
+
+    // 2. 현재 프로젝트 멤버에 추가
+    const newMembers = extractedData.map(p => ({
+      id: `member_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+      name: p.name,
+      institution: project.institution || '',
+      type: '서류',
+      field: '',
+      statusSelection: '대기',
+      statusGuide: '미완료',
+      statusReply: '미완료',
+      statusRemind: '미완료',
+      birthDate: p.birth || '',
+      phone: p.phone || '',
+      email: p.email || '',
+    }));
+
+    setMembers(prev => [...prev, ...newMembers]);
+    showToast(`${newMembers.length}명의 위원 정보가 프로젝트와 보관함에 동시 등록되었습니다.`);
+    
+    // 모달 닫기 및 상태 초기화
+    setTimeout(() => {
+      setIsAddModalOpen(false);
+      setAddModalTab('archive');
+      setTempExtractedData([]);
+      setUploadFiles([]);
+    }, 1500);
   };
 
   const toggleStatus = (memberId, field, nextValueOptions) => {
@@ -751,60 +876,167 @@ const ProjectDetailBoard = ({ project, onBack, onUpdateProject }) => {
             >
               <div className="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
                 <h3 className="text-lg font-black text-[#111827] flex items-center">
-                  <DatabaseIcon className="w-5 h-5 mr-2 text-[#3C478F]" /> 보관함에서 위원 추가
+                  <Plus className="w-5 h-5 mr-2 text-[#3C478F]" /> 위원 추가
                 </h3>
                 <button onClick={() => setIsAddModalOpen(false)} className="text-gray-400 hover:text-gray-600"><X className="w-6 h-6" /></button>
               </div>
               
-              <div className="p-4 border-b border-gray-100 bg-white">
-                <p className="text-sm text-gray-500 mb-3"><strong className="text-[#3C478F]">위원 정보 보관함</strong>에 저장된 명단입니다. 추가할 위원을 선택해 주세요.</p>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-300" />
-                  <input type="text" className="w-full pl-9 pr-4 py-2.5 bg-[#F8F9FB] border border-gray-200 rounded-xl text-sm font-bold focus:outline-none" placeholder="이름 또는 기관 검색..." />
-                </div>
+              <div className="flex border-b border-gray-100 bg-white px-6">
+                <button 
+                  onClick={() => setAddModalTab('archive')}
+                  className={`py-3 text-[13px] font-bold border-b-2 transition-all mr-6 ${addModalTab === 'archive' ? 'border-[#3C478F] text-[#3C478F]' : 'border-transparent text-gray-400'}`}
+                >
+                  기존 보관함에서 선택
+                </button>
+                <button 
+                  onClick={() => setAddModalTab('upload')}
+                  className={`py-3 text-[13px] font-bold border-b-2 transition-all ${addModalTab === 'upload' ? 'border-[#3C478F] text-[#3C478F]' : 'border-transparent text-gray-400'}`}
+                >
+                  새 파일에서 자동 추출
+                </button>
               </div>
 
-              <div className="flex-1 overflow-y-auto p-2 bg-white">
-                {availableProfiles.length === 0 ? (
-                  <div className="h-full flex items-center justify-center flex-col text-gray-400 text-sm">
-                     <p>추가할 수 있는 위원이 없습니다.</p>
-                     <p className="text-xs mt-1">위원 정보 가져오기 탭에서 데이터를 먼저 추출하세요.</p>
+              {addModalTab === 'archive' ? (
+                <>
+                  <div className="p-4 border-b border-gray-100 bg-white">
+                    <p className="text-sm text-gray-500 mb-3"><strong className="text-[#3C478F]">위원 정보 보관함</strong>에 저장된 명단입니다.</p>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-300" />
+                      <input 
+                        type="text" 
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full pl-9 pr-4 py-2.5 bg-[#F8F9FB] border border-gray-200 rounded-xl text-sm font-bold focus:outline-none" 
+                        placeholder="이름 또는 기관 검색..." 
+                      />
+                    </div>
                   </div>
-                ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-2">
-                    {availableProfiles.map(profile => (
-                      <div 
-                        key={profile.id} 
-                        onClick={() => {
-                          setSelectedProfileIds(prev => prev.includes(profile.id) ? prev.filter(id => id !== profile.id) : [...prev, profile.id])
-                        }}
-                        className={`p-3 rounded-2xl border cursor-pointer transition-all flex items-center ${selectedProfileIds.includes(profile.id) ? 'bg-blue-50 border-[#3C478F] shadow-[0_4px_10px_rgba(60,71,143,0.1)]' : 'bg-white border-gray-100 hover:border-gray-300'}`}
-                      >
-                        <div className="mr-3">
-                          {selectedProfileIds.includes(profile.id) ? <CheckCircle2 className="w-5 h-5 text-[#3C478F]" /> : <Square className="w-5 h-5 text-gray-200" />}
-                        </div>
-                        <div className="flex flex-col flex-1 overflow-hidden">
-                           <span className="font-black text-[13px] text-[#111827]">{profile.name}</span>
-                           <span className="text-[11px] text-gray-500 truncate">{profile.institution} | {profile.phone}</span>
-                        </div>
+
+                  <div className="flex-1 overflow-y-auto p-2 bg-white">
+                    {availableProfiles.length === 0 ? (
+                      <div className="h-full flex items-center justify-center flex-col text-gray-400 text-sm">
+                         <p>추가할 수 있는 위원이 없습니다.</p>
+                         <p className="text-xs mt-1">이미 추가되었거나 보관함이 비어있습니다.</p>
                       </div>
-                    ))}
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-2">
+                        {availableProfiles.map(profile => (
+                          <div 
+                            key={profile.id} 
+                            onClick={() => {
+                              setSelectedProfileIds(prev => prev.includes(profile.id) ? prev.filter(id => id !== profile.id) : [...prev, profile.id])
+                            }}
+                            className={`p-3 rounded-2xl border cursor-pointer transition-all flex items-center ${selectedProfileIds.includes(profile.id) ? 'bg-blue-50 border-[#3C478F] shadow-[0_4px_10px_rgba(60,71,143,0.1)]' : 'bg-white border-gray-100 hover:border-gray-300'}`}
+                          >
+                            <div className="mr-3">
+                              {selectedProfileIds.includes(profile.id) ? <CheckCircle2 className="w-5 h-5 text-[#3C478F]" /> : <Square className="w-5 h-5 text-gray-200" />}
+                            </div>
+                            <div className="flex flex-col flex-1 overflow-hidden">
+                               <span className="font-black text-[13px] text-[#111827]">{profile.name}</span>
+                               <span className="text-[11px] text-gray-500 truncate">{profile.institution} | {profile.phone}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
+                </>
+              ) : (
+                <div className="flex-1 p-6 flex flex-col bg-white">
+                  <div 
+                    className={`flex-1 border-2 border-dashed rounded-[2rem] flex flex-col items-center justify-center p-8 transition-all relative
+                      ${isAnalyzing ? 'bg-gray-50 border-gray-200' : 'bg-[#F8F9FB] border-gray-200 hover:border-[#3C478F] hover:bg-white'}
+                    `}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={async (e) => {
+                      e.preventDefault();
+                      if (isAnalyzing) return;
+                      const promises = [];
+                      if (e.dataTransfer.items) {
+                        for (let i = 0; i < e.dataTransfer.items.length; i++) {
+                          const item = e.dataTransfer.items[i];
+                          if (item.kind === 'file') {
+                            const entry = item.webkitGetAsEntry();
+                            if (entry) promises.push(traverseFileTree(entry));
+                          }
+                        }
+                        const filesArrays = await Promise.all(promises);
+                        const allFiles = filesArrays.flat().filter(f => f.name && !f.name.startsWith('.DS_Store'));
+                        if (allFiles.length > 0) handleFileUpload(allFiles);
+                      }
+                    }}
+                  >
+                    {isAnalyzing ? (
+                      <div className="flex flex-col items-center">
+                        <Loader2 className="w-12 h-12 text-[#3C478F] animate-spin mb-4" />
+                        <p className="font-black text-[#111827]">서버 분석 중...</p>
+                        <p className="text-xs text-gray-400 mt-2">파일이 많을수록 시간이 더 걸릴 수 있습니다.</p>
+                      </div>
+                    ) : tempExtractedData.length > 0 ? (
+                      <div className="flex flex-col items-center text-center">
+                        <div className="w-16 h-16 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mb-4">
+                          <CheckCircle2 className="w-8 h-8" />
+                        </div>
+                        <p className="font-black text-[#111827] text-lg">추출 성공!</p>
+                        <p className="text-sm text-gray-500 mt-1">{tempExtractedData.length}명의 위원이 식별되었습니다.</p>
+                        <div className="mt-4 flex flex-wrap justify-center gap-2 max-h-24 overflow-y-auto">
+                          {tempExtractedData.map((d, i) => (
+                            <span key={i} className="text-[11px] font-bold bg-[#3C478F] text-white px-2 py-1 rounded-md">{d.name}</span>
+                          ))}
+                        </div>
+                        <p className="text-xs text-gray-400 mt-4">잠시 후 창이 닫히며 목록에 추가됩니다.</p>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="p-5 bg-white rounded-3xl shadow-sm mb-4">
+                          <UploadCloud className="w-10 h-10 text-[#3C478F]" />
+                        </div>
+                        <p className="text-lg font-black text-[#111827]">프로필 파일 드래그</p>
+                        <p className="text-sm text-gray-500 mt-1 mb-6 text-center">PPT, 이미지, PDF 등 자동 추출을 지원합니다.<br/>(복수 파일 처리 가능)</p>
+                        <label className="cursor-pointer bg-[#3C478F] text-white px-8 py-3 rounded-full text-sm font-bold shadow-md hover:bg-gray-800 transition-all">
+                          파일 찾아보기
+                          <input 
+                            type="file" 
+                            multiple 
+                            className="hidden" 
+                            onChange={(e) => {
+                              if (e.target.files.length > 0) handleFileUpload(Array.from(e.target.files));
+                            }} 
+                          />
+                        </label>
+                      </>
+                    )}
+                    
+                    {uploadError && (
+                      <div className="mt-4 p-3 bg-red-50 text-red-600 rounded-xl text-xs font-semibold">
+                        ⚠️ {uploadError}
+                      </div>
+                    )}
+                  </div>
+                </div>
                 )}
               </div>
 
               <div className="p-4 border-t border-gray-100 bg-gray-50 flex justify-between items-center">
-                <span className="text-sm font-bold text-gray-600"><span className="text-[#3C478F]">{selectedProfileIds.length}</span>명 선택됨</span>
-                <div className="space-x-2">
-                  <button onClick={() => setIsAddModalOpen(false)} className="px-4 py-2 rounded-xl text-sm font-bold text-gray-600 bg-white border border-gray-200 hover:bg-gray-50 transition-colors">취소</button>
-                  <button 
-                    onClick={handleAddSelectedProfiles} 
-                    disabled={selectedProfileIds.length === 0}
-                    className={`px-6 py-2 rounded-xl text-sm font-black transition-colors ${selectedProfileIds.length > 0 ? 'bg-[#111827] text-white hover:bg-gray-800' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
-                  >
-                    프로젝트에 추가
-                  </button>
-                </div>
+                {addModalTab === 'archive' ? (
+                  <>
+                    <span className="text-sm font-bold text-gray-600"><span className="text-[#3C478F]">{selectedProfileIds.length}</span>명 선택됨</span>
+                    <div className="space-x-2">
+                      <button onClick={() => setIsAddModalOpen(false)} className="px-4 py-2 rounded-xl text-sm font-bold text-gray-600 bg-white border border-gray-200 hover:bg-gray-50 transition-colors">취소</button>
+                      <button 
+                        onClick={handleAddSelectedProfiles}
+                        disabled={selectedProfileIds.length === 0}
+                        className={`px-6 py-2 rounded-xl text-sm font-bold transition-all ${selectedProfileIds.length > 0 ? 'bg-[#3C478F] text-white shadow-md hover:bg-[#2A3266]' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
+                      >
+                        위원 추가하기
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <div className="w-full flex justify-end">
+                    <button onClick={() => setIsAddModalOpen(false)} className="px-6 py-2 rounded-xl text-sm font-bold text-gray-600 bg-white border border-gray-200 hover:bg-gray-50 transition-colors">닫기</button>
+                  </div>
+                )}
               </div>
             </motion.div>
           </motion.div>

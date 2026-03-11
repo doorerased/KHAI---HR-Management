@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { API_ENDPOINTS } from '../config/api';
+
 import { UploadCloud, FileType2, Loader2, Download, Table as TableIcon, Trash2, CheckSquare, Square, Save, Search, ArrowUpDown, ArrowUp, ArrowDown, RefreshCw, FileSearch, FolderPlus } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import * as XLSX from 'xlsx';
@@ -199,8 +201,7 @@ const ProfileExtractor = () => {
       formData.append('realFilename', file.name);
 
       try {
-        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-        const response = await fetch(`${apiUrl}/api/extract/profile`, {
+        const response = await fetch(API_ENDPOINTS.EXTRACT_PROFILE, {
           method: 'POST',
           body: formData,
         });

@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { API_ENDPOINTS } from '../config/api';
+
 import { SearchCode, Loader2, Download, Table as TableIcon, AlignLeft, Save, Trash2, CheckSquare, Square, Search, ArrowUpDown, ArrowUp, ArrowDown, RefreshCw, WalletCards } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import * as XLSX from 'xlsx';
@@ -125,8 +127,8 @@ const BankExtractor = () => {
         console.error('Failed to load master DB', e);
       }
 
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-      const response = await fetch(`${apiUrl}/api/extract/bank`, {
+
+      const response = await fetch(API_ENDPOINTS.EXTRACT_BANK, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: inputText, dbNames, dbProfiles }),
