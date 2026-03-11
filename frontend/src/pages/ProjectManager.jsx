@@ -1197,74 +1197,9 @@ const ProjectDetailBoard = ({ project, onBack, onUpdateProject }) => {
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* 데이터 관리(백업/복구) 모달 */}
-      <AnimatePresence>
-        {isDataModalOpen && (
-          <motion.div
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-100 flex items-center justify-center bg-[#111827]/40 backdrop-blur-sm p-4"
-          >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden"
-            >
-              <div className="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-[#F8F9FB]">
-                <h3 className="text-lg font-black text-[#111827] flex items-center">
-                  <ShieldCheck className="w-5 h-5 mr-2 text-[#3C478F]" /> 데이터 안전 관리
-                </h3>
-                <button onClick={() => { setIsDataModalOpen(false); setDataActionStatus({type:'', message:''}); }} className="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
-              </div>
-              <div className="p-6">
-                <div className="mb-6 p-4 bg-blue-50 rounded-2xl border border-blue-100">
-                  <p className="text-xs text-blue-700 font-bold leading-relaxed">
-                    <AlertTriangle className="w-3.5 h-3.5 inline mr-1 mb-0.5" /> 
-                    도메인이 바뀌거나 브라우저를 초기화하면 데이터가 유실될 수 있습니다. 정기적으로 백업 파일을 다운로드하여 보관하세요.
-                  </p>
-                </div>
-
-                <div className="space-y-4">
-                  <button 
-                    onClick={handleExportAllData}
-                    className="w-full flex items-center p-4 bg-white border border-gray-100 rounded-2xl hover:border-[#3C478F] hover:shadow-md transition-all group"
-                  >
-                    <div className="p-2.5 bg-gray-50 rounded-xl mr-4 group-hover:bg-blue-50 transition-colors">
-                      <Download className="w-5 h-5 text-gray-400 group-hover:text-[#3C478F]" />
-                    </div>
-                    <div className="text-left">
-                      <p className="font-bold text-[#111827] text-sm">내보내기 (백업)</p>
-                      <p className="text-xs text-gray-400 mt-0.5">현재 모든 정보를 파일로 저장합니다.</p>
-                    </div>
-                  </button>
-
-                  <label className="w-full flex items-center p-4 bg-white border border-gray-100 rounded-2xl hover:border-[#FCC243] hover:shadow-md transition-all group cursor-pointer">
-                    <div className="p-2.5 bg-gray-50 rounded-xl mr-4 group-hover:bg-yellow-50 transition-colors">
-                      <UploadCloud className="w-5 h-5 text-gray-400 group-hover:text-yellow-600" />
-                    </div>
-                    <div className="text-left">
-                      <p className="font-bold text-[#111827] text-sm">가져오기 (복구)</p>
-                      <p className="text-xs text-gray-400 mt-0.5">백업 파일을 불러와 데이터를 복원합니다.</p>
-                    </div>
-                    <input type="file" accept=".json" className="hidden" onChange={handleImportAllData} />
-                  </label>
-                </div>
-
-                {dataActionStatus.message && (
-                  <motion.div 
-                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-                    className={`mt-6 p-4 rounded-xl text-xs font-bold flex items-center ${dataActionStatus.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}
-                  >
-                    <CheckCircle2 className="w-4 h-4 mr-2" />
-                    {dataActionStatus.message}
-                  </motion.div>
-                )}
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 };
 
 export default ProjectManager;
+
