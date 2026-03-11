@@ -18,7 +18,7 @@ const Layout = () => {
       <aside className="w-64 bg-[#F2F3F7] flex flex-col z-10 hidden md:flex border-r-0">
         <div className="h-24 flex items-center justify-center bg-[#F2F3F7]">
           <h1 
-            className="text-[30px] font-black tracking-[0.15em] leading-none uppercase text-transparent bg-clip-text bg-linear-to-r from-[#3C478F] to-[#FCC243] ml-[0.15em] drop-shadow-sm"
+            className="text-[40px] font-black tracking-[0.15em] leading-none uppercase text-transparent bg-clip-text bg-linear-to-r from-[#3C478F] to-[#FCC243] ml-[0.15em] drop-shadow-sm"
             style={{ WebkitTextFillColor: 'transparent' }}
           >KHAI</h1>
         </div>
