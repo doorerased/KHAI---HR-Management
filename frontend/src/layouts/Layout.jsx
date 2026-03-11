@@ -19,14 +19,20 @@ const Layout = () => {
         <div className="h-28 flex items-center px-8 bg-[#F2F3F7]">
           <div className="flex items-center">
             <div className="flex flex-col">
-              <h1 className="text-[33px] font-black text-[#111827] tracking-[0.15em] leading-none uppercase">KHAI</h1>
-              <span className="text-[10px] font-black text-gray-400 tracking-[0.4em] uppercase mt-1.5 whitespace-nowrap">HR Management System</span>
+              <h1 
+                className="text-[33px] font-black tracking-[0.15em] leading-none uppercase text-transparent bg-clip-text bg-linear-to-r from-[#3C478F] to-[#FCC243] ml-[0.15em] drop-shadow-sm"
+                style={{ WebkitTextFillColor: 'transparent' }}
+              >KHAI</h1>
+              <span 
+                className="text-[10px] font-black tracking-[0.4em] uppercase mt-1.5 whitespace-nowrap text-transparent bg-clip-text bg-linear-to-r from-[#3C478F] to-[#FCC243]"
+                style={{ WebkitTextFillColor: 'transparent' }}
+              >HR Management System</span>
             </div>
           </div>
         </div>
 
         {/* 미니멀 구분선 */}
-        <div className="mx-6 h-px bg-gradient-to-r from-transparent via-gray-300/60 to-transparent" />
+        <div className="mx-6 h-px bg-linear-to-r from-transparent via-gray-300/60 to-transparent" />
         
         <nav className="flex-1 py-6 px-5 space-y-1">
           {navItems.map((item) => (
@@ -61,7 +67,7 @@ const Layout = () => {
 
         {/* 하단 미니멀 브랜딩 */}
         <div className="px-6 py-5 mt-auto">
-          <div className="h-px bg-gradient-to-r from-transparent via-gray-300/60 to-transparent mb-5" />
+          <div className="h-px bg-linear-to-r from-transparent via-gray-300/60 to-transparent mb-5" />
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse shadow-[0_0_6px_rgba(74,222,128,0.4)]" />
