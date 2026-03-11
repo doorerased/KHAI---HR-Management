@@ -14,7 +14,7 @@ const Layout = () => {
 
   return (
     <div className="flex h-screen bg-white overflow-hidden font-sans">
-      {/* Sidebar - Bauhaus Minimalism: Subtle contrast with main content */}
+      {/* Sidebar - Bauhaus Minimalism */}
       <aside className="w-64 bg-[#F2F3F7] flex flex-col z-10 hidden md:flex border-r-0">
         <div className="h-28 flex items-center px-8 bg-[#F2F3F7]">
           <div className="flex items-center">
@@ -24,34 +24,52 @@ const Layout = () => {
             </div>
           </div>
         </div>
+
+        {/* 미니멀 구분선 */}
+        <div className="mx-6 h-px bg-gradient-to-r from-transparent via-gray-300/60 to-transparent" />
         
-        <nav className="flex-1 py-6 px-5 space-y-1.5">
+        <nav className="flex-1 py-6 px-5 space-y-1">
           {navItems.map((item) => (
             <NavLink
               key={item.path}
               to={item.path}
               className={({ isActive }) =>
-                `relative flex items-center px-4 py-3 rounded-2xl text-[13px] font-bold transition-all duration-300 whitespace-nowrap ${
+                `group relative flex items-center px-4 py-3.5 rounded-2xl text-[14px] font-bold transition-all duration-300 whitespace-nowrap ${
                   isActive
-                    ? 'text-[#111827] bg-white shadow-[0_4px_20px_rgb(0,0,0,0.04)]'
-                    : 'text-gray-400 hover:text-[#3C478F] hover:bg-white/50'
+                    ? 'text-[#111827] bg-white shadow-[0_4px_20px_rgb(0,0,0,0.05)]'
+                    : 'text-gray-400 hover:text-[#111827] hover:bg-white/60 hover:translate-x-0.5'
                 }`
               }
             >
               {({ isActive }) => (
                 <>
                   {isActive && (
-                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-[#FCC243] rounded-r-full" />
+                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-6 bg-[#FCC243] rounded-r-full shadow-[2px_0_8px_rgba(252,194,67,0.3)]" />
                   )}
-                  <span className={`mr-3 ${isActive ? 'text-[#3C478F]' : 'text-gray-400'}`}>
-                    {React.cloneElement(item.icon, { className: 'w-4 h-4' })}
+                  <span className={`mr-3 transition-colors duration-300 ${isActive ? 'text-[#3C478F]' : 'text-gray-400 group-hover:text-[#3C478F]'}`}>
+                    {React.cloneElement(item.icon, { className: 'w-[18px] h-[18px]' })}
                   </span>
                   {item.label}
+                  {isActive && (
+                    <div className="ml-auto w-1.5 h-1.5 rounded-full bg-[#FCC243]" />
+                  )}
                 </>
               )}
             </NavLink>
           ))}
         </nav>
+
+        {/* 하단 미니멀 브랜딩 */}
+        <div className="px-6 py-5 mt-auto">
+          <div className="h-px bg-gradient-to-r from-transparent via-gray-300/60 to-transparent mb-5" />
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse shadow-[0_0_6px_rgba(74,222,128,0.4)]" />
+              <span className="text-[11px] font-bold text-gray-400">System Online</span>
+            </div>
+            <span className="text-[10px] font-bold text-gray-300 tracking-wider">v1.0</span>
+          </div>
+        </div>
       </aside>
 
       {/* Main Content */}
