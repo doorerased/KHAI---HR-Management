@@ -351,11 +351,10 @@ const BankExtractor = () => {
           <p className="text-gray-400 mt-2 text-sm font-medium tracking-wide">위원들이 보낸 문자/카톡 텍스트에서 계좌와 주민번호를 추출합니다.</p>
         </div>
         
-        {/* Apple-style Minimal Tabs */}
-        <div className="flex space-x-8 mt-4 md:mt-0">
+        <div className="flex space-x-6 mt-4 md:mt-0">
           <button 
             onClick={() => setActiveTab('extract')}
-            className={`relative pb-3 text-[15px] font-bold transition-colors ${activeTab === 'extract' ? 'text-[#3C478F]' : 'text-gray-400 hover:text-gray-600'}`}
+            className={`relative pb-3 text-[14px] font-bold transition-colors whitespace-nowrap ${activeTab === 'extract' ? 'text-[#3C478F]' : 'text-gray-400 hover:text-gray-600'}`}
           >
             추출하기
             {activeTab === 'extract' && (
@@ -364,10 +363,10 @@ const BankExtractor = () => {
           </button>
           <button 
             onClick={() => setActiveTab('archive')}
-            className={`relative pb-3 text-[15px] font-bold transition-colors flex items-center ${activeTab === 'archive' ? 'text-[#3C478F]' : 'text-gray-400 hover:text-gray-600'}`}
+            className={`relative pb-3 text-[14px] font-bold transition-colors flex items-center whitespace-nowrap ${activeTab === 'archive' ? 'text-[#3C478F]' : 'text-gray-400 hover:text-gray-600'}`}
           >
             내 보관함
-            <span className={`ml-2 px-2 py-0.5 rounded-full text-xs font-bold transition-colors ${activeTab === 'archive' ? 'bg-[#3C478F]/10 text-[#3C478F]' : 'bg-gray-100 text-gray-500'}`}>{archivedData.length}</span>
+            <span className={`ml-2 px-1.5 py-0.5 rounded-full text-[10px] font-bold transition-colors ${activeTab === 'archive' ? 'bg-[#3C478F]/10 text-[#3C478F]' : 'bg-gray-100 text-gray-500'}`}>{archivedData.length}</span>
             {activeTab === 'archive' && (
               <motion.div layoutId="bankTabIndicator" className="absolute -bottom-px left-0 right-0 h-1 bg-[#FCC243] rounded-t-full" />
             )}
