@@ -61,7 +61,22 @@ function parseProfileText(text, filename) {
 
   let name = '';
   
-  if (filename) {
+  // 1. 섹션 기반 추출 (이름 섹션 근처 텍스트)
+  const nameSectionRegex = /이름([\s\S]*?)(?:생년|소속|나이|전문|직업|학력|주소)/;
+  const nameSectionMatch = normalizedText.match(nameSectionRegex);
+  if (nameSectionMatch) {
+    const rawName = nameSectionMatch[1].replace(/[^가-힣a-zA-Z]/g, '');
+    if (rawName.length >= 2) name = rawName.substring(0, 5);
+  }
+
+  // 2. 패턴 기반 추출 ('성명: OOO' 등 특정 키워드 패턴)
+  if (!name) {
+    const alternativeNameMatch = normalizedText.match(/(?:이\s*름|성\s*명)\s*[:|]?\s*([가-힣]{2,5})/);
+    if(alternativeNameMatch) name = alternativeNameMatch[1];
+  }
+
+  // 3. 파일명 기반 추출 (가장 마지막 보루)
+  if (!name && filename) {
     const filenameMatch = filename.match(/^([가-힣]{2,5})[_ ]/);
     if (filenameMatch) {
       name = filenameMatch[1];
@@ -69,20 +84,6 @@ function parseProfileText(text, filename) {
         const singleNameMatch = filename.match(/^([가-힣]{2,5})\./);
         if (singleNameMatch) name = singleNameMatch[1];
     }
-  }
-
-  if (!name) {
-    const nameSectionRegex = /이름([\s\S]*?)(?:생년|소속|나이|전문|직업|학력|주소)/;
-    const nameSectionMatch = normalizedText.match(nameSectionRegex);
-    if (nameSectionMatch) {
-      const rawName = nameSectionMatch[1].replace(/[^가-힣a-zA-Z]/g, '');
-      if (rawName.length >= 2) name = rawName.substring(0, 5);
-    }
-  }
-
-  if (!name) {
-    const alternativeNameMatch = normalizedText.match(/(?:이\s*름|성\s*명)\s*[:|]?\s*([가-힣]{2,5})/);
-    if(alternativeNameMatch) name = alternativeNameMatch[1];
   }
 
   return { name, birth, phone, email };
