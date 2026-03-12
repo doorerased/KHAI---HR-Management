@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { BriefcaseBusiness, FolderOpen, Plus, Search, MoreVertical, Table as TableIcon, Users, Calendar, Trash2, ArrowLeft, CheckSquare, Square, Download, CheckCircle2, X, Link as LinkIcon, UploadCloud, Loader2, Database, ShieldCheck, AlertTriangle } from 'lucide-react';
 import { API_ENDPOINTS } from '../config/api';
+import ConfirmModal from '../components/ConfirmModal';
 import { motion, AnimatePresence } from 'framer-motion';
 import * as XLSX from 'xlsx';
 
@@ -35,6 +36,9 @@ const ProjectManager = () => {
   const [isDataModalOpen, setIsDataModalOpen] = useState(false);
   const [dataActionStatus, setDataActionStatus] = useState({ type: '', message: '' });
 
+  // 삭제 확인 모달 상태
+  const [confirmDeleteProject, setConfirmDeleteProject] = useState(null); // 삭제 대상 프로젝트 ID
+
   // projects 변경 시 로컬 스토리지 저장 (용량 초과 에러 방지)
   useEffect(() => {
     try {
@@ -61,6 +65,7 @@ const ProjectManager = () => {
         type: newProjectType.trim(),
         description: newProjectDesc.trim(),
         createdAt: Date.now(),
+        status: '진행중', // '진행중' | '완료'
         members: [], 
       };
       setProjects(prev => [newProject, ...prev]);
@@ -110,9 +115,12 @@ const ProjectManager = () => {
 
   const handleDeleteProject = (id, e) => {
     e.stopPropagation();
-    if (window.confirm('이 프로젝트와 내부의 연동 데이터를 모두 삭제하시겠습니까?\n(원본 위원/정산 정보는 삭제되지 않습니다)')) {
-      setProjects(prev => prev.filter(p => p.id !== id));
-    }
+    setConfirmDeleteProject(id);
+  };
+
+  const executeDeleteProject = () => {
+    setProjects(prev => prev.filter(p => p.id !== confirmDeleteProject));
+    setConfirmDeleteProject(null);
   };
 
   const filteredProjects = projects.filter(p => 
@@ -295,6 +303,54 @@ const ProjectManager = () => {
             setProjects(prev => prev.map(p => p.id === updatedProject.id ? updatedProject : p));
             setSelectedProject(updatedProject);
           }}
+          onToggleStatus={(projectId) => {
+            setProjects(prev => prev.map(p => {
+              if (p.id === projectId) {
+                const isNowComplete = p.status !== '완료';
+                const nextStatus = isNowComplete ? '완료' : '진행중';
+                
+                let updatedMembers = [...(p.members || [])];
+                
+                // 완료로 변경할 때 스냅샷 저장
+                if (isNowComplete) {
+                  let bankInfos = [];
+                  let profileInfos = [];
+                  try {
+                    bankInfos = JSON.parse(localStorage.getItem('savedBankInfos') || '[]');
+                    profileInfos = JSON.parse(localStorage.getItem('savedProfiles') || '[]');
+                  } catch (e) {}
+
+                  updatedMembers = updatedMembers.map(member => {
+                    const matchedBank = bankInfos.find(b => b.name === member.name);
+                    const matchedProfile = profileInfos.find(p => p.name === member.name);
+                    
+                    return {
+                      ...member,
+                      birthDate: matchedProfile ? (matchedProfile.birth || matchedProfile.birthDate || member.birthDate) : member.birthDate || '',
+                      phone: matchedProfile ? (matchedProfile.phone || member.phone) : member.phone || '',
+                      email: matchedProfile ? (matchedProfile.email || member.email) : member.email || '',
+                      bank: matchedBank ? matchedBank.bank : member.bank || '정보 없음',
+                      account: matchedBank ? matchedBank.account : member.account || '정보 없음',
+                      residentId: matchedBank ? matchedBank.residentId : member.residentId || '정보 없음',
+                      incomeCategory: matchedBank ? matchedBank.incomeCategory : member.incomeCategory || '-',
+                      _isSnapshot: true // 스냅샷 데이터임을 표시
+                    };
+                  });
+                } else {
+                  // 다시 진행중으로 바꿀 때는 스냅샷 표시 제거 (동기화 재개)
+                  updatedMembers = updatedMembers.map(m => {
+                    const { _isSnapshot, ...rest } = m;
+                    return rest;
+                  });
+                }
+
+                const updated = { ...p, status: nextStatus, members: updatedMembers };
+                if (selectedProject?.id === projectId) setSelectedProject(updated);
+                return updated;
+              }
+              return p;
+            }));
+          }}
         />
       )}
 
@@ -435,6 +491,14 @@ const ProjectManager = () => {
         )}
       </AnimatePresence>
 
+      <ConfirmModal
+        isOpen={confirmDeleteProject !== null}
+        title="프로젝트 삭제"
+        message="이 프로젝트와 내부의 연동 데이터를 모두 삭제하시겠습니까? (원본 위원/정산 정보는 삭제되지 않습니다)"
+        onConfirm={executeDeleteProject}
+        onCancel={() => setConfirmDeleteProject(null)}
+      />
+
     </div>
   );
 };
@@ -448,7 +512,7 @@ const STATUS_COLORS = {
   '미완료': 'bg-yellow-100 text-yellow-700',
 };
 
-const ProjectDetailBoard = ({ project, onBack, onUpdateProject }) => {
+const ProjectDetailBoard = ({ project, onBack, onUpdateProject, onToggleStatus }) => {
   const [members, setMembers] = useState(project.members || []);
   const [selectedIds, setSelectedIds] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -469,6 +533,9 @@ const ProjectDetailBoard = ({ project, onBack, onUpdateProject }) => {
 
   // 토스트 메시지 상태
   const [saveToast, setSaveToast] = useState({ show: false, message: '' });
+
+  // 멤버 삭제 확인 모달 상태
+  const [confirmRemoveMembers, setConfirmRemoveMembers] = useState(false);
 
   // 토스트 표시 함수
   const showToast = (message) => {
@@ -522,6 +589,24 @@ const ProjectDetailBoard = ({ project, onBack, onUpdateProject }) => {
       profileInfos = JSON.parse(localStorage.getItem('savedProfiles') || '[]');
     } catch (e) {
       console.error('Failed to parse storage data', e);
+    }
+
+    // 프로젝트가 '완료' 상태이면 이미 저장된 멤버 데이터를 그대로 사용
+    if (project.status === '완료') {
+      return members
+        .filter(m => 
+          m.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (m.institution && m.institution.toLowerCase().includes(searchQuery.toLowerCase()))
+        )
+        .sort((a, b) => {
+          if (sortConfig.key === 'statusSelection') {
+            const weight = { '선정': 3, '미선정': 2, '대기': 1 };
+            const valA = weight[a.statusSelection] || 0;
+            const valB = weight[b.statusSelection] || 0;
+            return sortConfig.direction === 'asc' ? valA - valB : valB - valA;
+          }
+          return 0;
+        });
     }
 
     return members.map(member => {
@@ -737,10 +822,13 @@ const ProjectDetailBoard = ({ project, onBack, onUpdateProject }) => {
   };
 
   const removeSelectedMembers = () => {
-    if (window.confirm(`선택한 ${selectedIds.length}명의 위원을 프로젝트에서 제외하시겠습니까? (원본 데이터는 삭제되지 않습니다)`)) {
-      setMembers(prev => prev.filter(m => !selectedIds.includes(m.id)));
-      setSelectedIds([]);
-    }
+    setConfirmRemoveMembers(true);
+  };
+
+  const executeRemoveMembers = () => {
+    setMembers(prev => prev.filter(m => !selectedIds.includes(m.id)));
+    setSelectedIds([]);
+    setConfirmRemoveMembers(false);
   };
 
   // 모든(또는 선택된) 위원의 구분을 일괄 변경하는 함수
@@ -777,14 +865,17 @@ const ProjectDetailBoard = ({ project, onBack, onUpdateProject }) => {
       '소득구분': row.incomeCategory !== '-' ? row.incomeCategory : '',
     }));
 
-    if(XLSX) {
-      const worksheet = XLSX.utils.json_to_sheet(excelData);
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, "프로젝트_통합명단");
-      XLSX.writeFile(workbook, `${project.name}_통합데이터.xlsx`);
-    } else {
-      alert("엑셀 다운로드 라이브러리가 로드되지 않았습니다.");
-    }
+    const worksheet = XLSX.utils.json_to_sheet(excelData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "프로젝트_통합명단");
+    const wbout = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+    const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${project.name}_통합데이터.xlsx`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -833,6 +924,22 @@ const ProjectDetailBoard = ({ project, onBack, onUpdateProject }) => {
           >
             <Download className="w-4 h-4 mr-1" /> 엑셀
           </button>
+          <button 
+            onClick={() => onToggleStatus(project.id)}
+            className={`px-4 py-2 rounded-lg text-xs font-black transition-all flex items-center shadow-md group ${
+              project.status === '완료' 
+                ? 'bg-green-500 text-white hover:bg-green-600' 
+                : 'bg-white border-2 border-yellow-400 text-yellow-700 hover:bg-yellow-50'
+            }`}
+            title={project.status === '완료' ? "클릭하여 진행중으로 변경 (데이터 동기화 재개)" : "클릭하여 완료로 처리 (당시 데이터 고정)"}
+          >
+            {project.status === '완료' ? (
+              <><CheckCircle2 className="w-4 h-4 mr-1.5" /> 완료됨</>
+            ) : (
+              <><Loader2 className="w-4 h-4 mr-1.5 group-hover:animate-spin" /> 완료하기</>
+            )}
+          </button>
+
           <button 
             onClick={handleOpenAddModal}
             className="px-4 py-2 bg-[#111827] text-white rounded-lg text-xs font-bold hover:bg-gray-800 transition-colors shadow-[0_4px_10px_rgba(17,24,39,0.3)] flex items-center"
@@ -1192,6 +1299,14 @@ const ProjectDetailBoard = ({ project, onBack, onUpdateProject }) => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <ConfirmModal
+        isOpen={confirmRemoveMembers}
+        title="위원 제외"
+        message={`선택한 ${selectedIds.length}명의 위원을 프로젝트에서 제외하시겠습니까? (원본 데이터는 삭제되지 않습니다)`}
+        onConfirm={executeRemoveMembers}
+        onCancel={() => setConfirmRemoveMembers(false)}
+      />
     </div>
   );
 };

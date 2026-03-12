@@ -61,7 +61,40 @@ const ProjectSaveModal = ({ isOpen, onClose, dataToSave, sourceType, onSaveSucce
     dataToSave.forEach(newItem => {
       if (!newItem.name) return;
       
-      const existingIndex = targetMembers.findIndex(m => m.name === newItem.name);
+      const existingIndex = targetMembers.findIndex(m => {
+        // 1. 이름 비교
+        const isNameMatch = m.name === newItem.name;
+        if (!isNameMatch) return false;
+
+        // 2. 식별 정보(YYMMDD) 추출 함수
+        const getYYMMDD = (birth, rrn) => {
+          // 주민번호에서 숫자 6자리 추출
+          if (rrn && /^\d{6}/.test(rrn)) {
+            return rrn.substring(0, 6);
+          }
+          // 생년월일에서 YYMMDD 추출 (YYYY.MM.DD 또는 YYYY-MM-DD 등)
+          if (birth && birth !== '추출불가') {
+            const clean = birth.replace(/[^\d]/g, '');
+            if (clean.length === 8) return clean.substring(2); // 19900101 -> 900101
+            if (clean.length === 6) return clean;
+          }
+          return null;
+        };
+
+        const mIdentity = getYYMMDD(m.birth, m.residentId);
+        const newIdentity = getYYMMDD(newItem.birth, newItem.residentId);
+
+        // 둘 다 식별 정보(YYMMDD)가 있는 경우, 이 정보가 정확히 일치해야만 동일인물로 판정
+        if (mIdentity && newIdentity) {
+          const isSamePerson = mIdentity === newIdentity;
+          console.log(`[Identity Match] ${m.name}: ${mIdentity} vs ${newIdentity} => ${isSamePerson ? 'MATCH' : 'DIFFERENT'}`);
+          return isSamePerson;
+        }
+
+        // 어느 한쪽이라도 정보가 없다면 기존처럼 이름으로 매칭 (하위 호환성 유지)
+        console.log(`[Identity Fallback] ${m.name}: Missing identity info, matching by name only.`);
+        return true;
+      });
       
       if (existingIndex >= 0) {
         // 기존 멤버 정보 업데이트

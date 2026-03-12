@@ -5,6 +5,7 @@ import { SearchCode, Loader2, Download, Table as TableIcon, AlignLeft, Save, Tra
 import { motion, AnimatePresence } from 'framer-motion';
 import * as XLSX from 'xlsx';
 import ProjectSaveModal from '../components/ProjectSaveModal';
+import ConfirmModal from '../components/ConfirmModal';
 
 const LOCAL_STORAGE_KEY = 'savedBankInfos';
 
@@ -42,6 +43,7 @@ const BankExtractor = () => {
   
   // Ctrl+S 저장 토스트 알림을 위한 상태
   const [showSaveToast, setShowSaveToast] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   // -- 모달 및 성공 알림 --
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
@@ -159,9 +161,9 @@ const BankExtractor = () => {
           let foundDuplicates = [];
 
           result.data.forEach((newItem, index) => {
-            // 중복 판별 (이름, 주민번호, 은행명, 계좌번호가 모두 동일한 경우)
+            // 중복 판별 (이름과 주민번호가 동일하면 동일 인물로 판정)
             const isDuplicate = (a, b) => 
-              a.name === b.name && a.residentId === b.residentId && a.bank === b.bank && a.account === b.account;
+              a.name === b.name && a.residentId === b.residentId;
             
             const existingIndex = updatedData.findIndex(item => isDuplicate(item, newItem));
             
@@ -214,7 +216,14 @@ const BankExtractor = () => {
     const worksheet = XLSX.utils.json_to_sheet(excelData);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "입금정보목록");
-    XLSX.writeFile(workbook, fileName);
+    const wbout = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+    const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   // --- 보관함 관리 기능 ---
@@ -234,19 +243,19 @@ const BankExtractor = () => {
 
   const deleteSelected = () => {
     if (selectedIds.length === 0) return;
-    
-    const count = selectedIds.length;
-    
-    if (window.confirm(`선택한 ${count}건의 데이터를 삭제하시겠습니까?`)) {
-      setArchivedData(prev => {
-        const nextData = prev.filter(item => {
-          if (!item.archiveId) return true;
-          return !selectedIds.includes(item.archiveId);
-        });
-        return nextData;
+    setConfirmDelete(true);
+  };
+
+  const executeDelete = () => {
+    setArchivedData(prev => {
+      const nextData = prev.filter(item => {
+        if (!item.archiveId) return true;
+        return !selectedIds.includes(item.archiveId);
       });
-      setSelectedIds([]); 
-    }
+      return nextData;
+    });
+    setSelectedIds([]);
+    setConfirmDelete(false);
   };
 
   const exportSelectedToExcel = () => {
@@ -759,6 +768,14 @@ const BankExtractor = () => {
           setProjectSaveSuccessMessage(`'${projName}' 폴더에 정보가 모두 병합되었습니다!`);
           setTimeout(() => setProjectSaveSuccessMessage(''), 3000);
         }} 
+      />
+
+      <ConfirmModal
+        isOpen={confirmDelete}
+        title="입금 정보 삭제"
+        message={`선택한 ${selectedIds.length}건의 데이터를 삭제하시겠습니까?`}
+        onConfirm={executeDelete}
+        onCancel={() => setConfirmDelete(false)}
       />
     </div>
   );

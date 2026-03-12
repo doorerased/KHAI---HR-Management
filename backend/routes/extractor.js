@@ -244,13 +244,35 @@ function parseBankText(text, dbNames = [], dbProfiles = []) {
     accountCandidates.push(cleanBlock);
   }
 
-  // 4. 이름 탐색 (보관함 대조 최우선)
-  for (const dbName of dbNames) {
-    if (dbName && normalizedText.includes(dbName)) {
-      name = dbName;
-      break;
+  // 4. 이름 탐색 (보관함 대조 최우선 - 이름 + 생년월일 매칭 강화)
+  let bestNameMatch = '';
+  
+  // 주민번호에서 생년월일(YYMMDD) 추출
+  const rrnBirth = residentId.substring(0, 6); // "830115"
+
+  for (const profile of dbProfiles) {
+    if (!profile.name) continue;
+    
+    // 텍스트에 이름이 포함되어 있는지 확인
+    if (normalizedText.includes(profile.name)) {
+      // 이름이 발견되면, 생년월일까지 대조 시도
+      if (residentId !== '주민번호식별불가' && profile.birth && profile.birth !== '추출불가') {
+        const profileBirth = profile.birth.replace(/[^\d]/g, '').substring(2); // "1983.01.15" -> "830115"
+        
+        if (rrnBirth === profileBirth) {
+          // 이름과 생년월일이 모두 일치하면 100% 동일인물로 간주하고 즉시 중단
+          name = profile.name;
+          bestNameMatch = name;
+          break;
+        }
+      }
+      
+      // 생년월일 정보가 없거나 불일치하더라도 우선 이름 후보로 저장 (나중에 더 좋은 매칭이 없을 때 사용)
+      if (!bestNameMatch) bestNameMatch = profile.name;
     }
   }
+  
+  if (bestNameMatch) name = bestNameMatch;
 
   // 5. 은행명 탐색
   const bankKeys = Object.keys(BANK_MAP);

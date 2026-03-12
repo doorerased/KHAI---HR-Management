@@ -5,6 +5,7 @@ import { UploadCloud, FileType2, Loader2, Download, Table as TableIcon, Trash2, 
 import { motion, AnimatePresence } from 'framer-motion';
 import * as XLSX from 'xlsx';
 import ProjectSaveModal from '../components/ProjectSaveModal';
+import ConfirmModal from '../components/ConfirmModal';
 
 const LOCAL_STORAGE_KEY = 'savedProfiles';
 
@@ -36,6 +37,7 @@ const ProfileExtractor = () => {
   const [sortConfig, setSortConfig] = useState({ key: 'createdAt', direction: 'desc' });
   const [duplicatesInfo, setDuplicatesInfo] = useState(null); 
   const searchInputRef = useRef(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const [showSaveToast, setShowSaveToast] = useState(false);
   
@@ -260,7 +262,14 @@ const ProfileExtractor = () => {
     const worksheet = XLSX.utils.json_to_sheet(excelData);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "평가위원목록");
-    XLSX.writeFile(workbook, fileName);
+    const wbout = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+    const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   const toggleSelectAll = () => {
@@ -279,16 +288,16 @@ const ProfileExtractor = () => {
 
   const deleteSelected = () => {
     if (selectedIds.length === 0) return;
-    
-    const count = selectedIds.length;
-    
-    if (window.confirm(`선택한 ${count}명의 위원 정보를 삭제하시겠습니까?`)) {
-      setArchivedData(prev => {
-        const nextData = prev.filter(item => !selectedIds.includes(item.archiveId));
-        return nextData;
-      });
-      setSelectedIds([]); 
-    }
+    setConfirmDelete(true);
+  };
+
+  const executeDelete = () => {
+    setArchivedData(prev => {
+      const nextData = prev.filter(item => !selectedIds.includes(item.archiveId));
+      return nextData;
+    });
+    setSelectedIds([]);
+    setConfirmDelete(false);
   };
 
   const exportSelectedToExcel = () => {
@@ -715,6 +724,14 @@ const ProfileExtractor = () => {
           setSelectedIds([]); // 성공 시 선택 해제
           setTimeout(() => setProjectSaveSuccessMessage(''), 3000);
         }} 
+      />
+
+      <ConfirmModal
+        isOpen={confirmDelete}
+        title="위원 정보 삭제"
+        message={`선택한 ${selectedIds.length}명의 위원 정보를 삭제하시겠습니까?`}
+        onConfirm={executeDelete}
+        onCancel={() => setConfirmDelete(false)}
       />
 
     </div>
