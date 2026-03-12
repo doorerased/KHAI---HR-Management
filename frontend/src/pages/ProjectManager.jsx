@@ -8,6 +8,7 @@ import * as XLSX from 'xlsx';
 const LOCAL_STORAGE_KEY = 'khai_projects';
 
 const ProjectManager = () => {
+  console.log('ProjectManager Loaded - 2026-03-12 09:44');
   const [projects, setProjects] = useState(() => {
     try {
       const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
