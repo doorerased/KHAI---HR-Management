@@ -8,7 +8,7 @@ import * as XLSX from 'xlsx';
 const LOCAL_STORAGE_KEY = 'khai_projects';
 
 const ProjectManager = () => {
-  console.log('ProjectManager Loaded - 2026-03-12 09:44');
+  console.log('ProjectManager Loaded - 2026-03-12 10:55');
   const [projects, setProjects] = useState(() => {
     try {
       const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
@@ -246,55 +246,61 @@ const ProjectManager = () => {
                  <p className="text-xs mt-2 text-gray-500 text-center max-w-xs">'새 폴더' 버튼을 눌러 프로젝트를 생성해 보세요.</p>
                   <button onClick={() => { resetModalFields(); setIsModalOpen(true); }} className="mt-6 px-5 py-2 bg-[#111827] text-white font-bold rounded-full shadow-md transition-colors text-xs whitespace-nowrap">프로젝트 생성</button>
                </div>
-            ) : (
+             ) : (
                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                 {filteredProjects.map((project) => (
-                   <motion.div
-                     key={project.id}
-                     initial={{ opacity: 0, y: 10 }}
-                     animate={{ opacity: 1, y: 0 }}
-                     className="bg-white border border-gray-100 rounded-3xl p-6 cursor-pointer group hover:border-[#111827]/20 hover:shadow-[0_8px_30px_rgb(0,0,0,0.06)] transition-all duration-300 relative overflow-hidden"
-                     onClick={() => { setSelectedProject(project); setActiveView('detail'); }}
-                   >
-                     {/* 윗쪽 장식선 */}
-                     <div className="absolute top-0 left-0 right-0 h-1.5 bg-linear-to-r from-[#FCC243] to-yellow-300" />
-                     
-                     <div className="flex justify-between items-start mb-4">
-                       <div className="p-3 bg-yellow-50 text-yellow-600 rounded-2xl group-hover:bg-[#FCC243] group-hover:text-yellow-900 transition-colors">
-                         <FolderOpen className="w-6 h-6" />
-                       </div>
-                       <div className="flex items-center space-x-1">
-                        <button onClick={(e) => handleEditProject(project, e)} className="p-2 text-gray-300 hover:text-[#3C478F] hover:bg-blue-50 rounded-full transition-colors">
-                            <MoreVertical className="w-4 h-4" />
-                        </button>
-                        <button onClick={(e) => handleDeleteProject(project.id, e)} className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors">
-                            <Trash2 className="w-4 h-4" />
-                        </button>
-                       </div>
-                     </div>
-                     
-                     <h3 className="text-lg font-black text-[#111827] mb-1.5 truncate group-hover:text-[#3C478F] transition-colors">{project.name}</h3>
-                     <p className="text-xs text-gray-500 font-medium mb-5 line-clamp-2 h-8 leading-relaxed">
-                       {project.description || '설명 없음'}
-                     </p>
-                     
-                     <div className="flex items-center justify-between pt-4 border-t border-gray-50">
-                       <div className="flex items-center text-gray-500 text-sm font-bold">
-                         <Users className="w-4 h-4 mr-2 text-gray-400" />
-                         <span>{(project.members || []).length}명</span>
-                       </div>
-                       <div className="flex items-center text-gray-400 text-xs font-medium">
-                         <Calendar className="w-3.5 h-3.5 mr-1" />
-                         {new Date(project.createdAt).toLocaleDateString('ko-KR')}
-                       </div>
-                     </div>
-                   </motion.div>
-                 ))}
-               </div>
-            )}
-          </div>
-        </>
-      )}
+                  {filteredProjects.map((project) => (
+                    <motion.div
+                      key={project.id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="bg-white border border-gray-100 rounded-3xl p-6 cursor-pointer group hover:border-[#111827]/20 hover:shadow-[0_8px_30px_rgb(0,0,0,0.06)] transition-all duration-300 relative overflow-hidden"
+                      onClick={() => { setSelectedProject(project); setActiveView('detail'); }}
+                    >
+                      {/* 윗쪽 장식선 */}
+                      <div className="absolute top-0 left-0 right-0 h-1.5 bg-linear-to-r from-[#FCC243] to-yellow-300" />
+                      
+                      <div className="flex justify-between items-start mb-4">
+                        <div className="p-3 bg-yellow-50 text-yellow-600 rounded-2xl group-hover:bg-[#FCC243] group-hover:text-yellow-900 transition-colors">
+                          <FolderOpen className="w-6 h-6" />
+                        </div>
+                        <div className="flex items-center space-x-1">
+                          {/* 상태 표시 태그 (상단 이동) */}
+                          <div className={`px-2 py-1 rounded-full text-[10px] font-black tracking-tight flex items-center gap-1 mr-2 bg-white/90 backdrop-blur-sm shadow-sm border ${project.status === "완료" ? "text-green-600 border-green-200" : "text-yellow-600 border-yellow-200"}`}>
+                            {project.status === "완료" ? <CheckCircle2 className="w-3 h-3 text-green-500" /> : <Loader2 className="w-3 h-3 animate-spin text-yellow-500" />}
+                            <span className="ml-0.5">{project.status === "완료" ? "완료" : "진행중"}</span>
+                          </div>
+                          <button onClick={(e) => handleEditProject(project, e)} className="p-2 text-gray-300 hover:text-[#3C478F] hover:bg-blue-50 rounded-full transition-colors">
+                              <MoreVertical className="w-4 h-4" />
+                          </button>
+                          <button onClick={(e) => handleDeleteProject(project.id, e)} className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors">
+                              <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                      
+                      <h3 className="text-lg font-black text-[#111827] mb-1.5 truncate group-hover:text-[#3C478F] transition-colors">{project.name}</h3>
+                      <p className="text-xs text-gray-500 font-medium mb-5 line-clamp-2 h-8 leading-relaxed">
+                        {project.description || '설명 없음'}
+                      </p>
+                      
+                      <div className="flex items-center justify-between pt-4 border-t border-gray-50">
+                        <div className="flex items-center text-gray-500 text-sm font-bold">
+                          <Users className="w-4 h-4 mr-2 text-gray-400" />
+                          <span>{(project.members || []).length}명</span>
+                        </div>
+                        <div className="flex items-center text-gray-400 text-xs font-medium">
+                          <Calendar className="w-3.5 h-3.5 mr-1" />
+{new Date(project.createdAt).toLocaleDateString('ko-KR')}
+                        </div>
+                      </div>
+
+                    </motion.div>
+                  ))}
+                </div>
+             )}
+           </div>
+         </>
+       )}
 
       {activeView === 'detail' && selectedProject && (
         <ProjectDetailBoard 
@@ -934,10 +940,10 @@ const ProjectDetailBoard = ({ project, onBack, onUpdateProject, onToggleStatus }
             }`}
             title={project.status === '완료' ? "클릭하여 진행중으로 변경 (데이터 동기화 재개)" : "클릭하여 완료로 처리 (당시 데이터 고정)"}
           >
-            {project.status === '완료' ? (
-              <><CheckCircle2 className="w-4 h-4 mr-1.5" /> 완료됨</>
+            {project.status === "완료" ? (
+              <><CheckCircle2 className="w-4 h-4 mr-1.5 text-white" /> 완료됨</>
             ) : (
-              <><Loader2 className="w-4 h-4 mr-1.5 group-hover:animate-spin" /> 완료하기</>
+              <><Loader2 className="w-4 h-4 mr-1.5 group-hover:animate-spin text-yellow-600" /> 완료하기</>
             )}
           </button>
 
@@ -967,7 +973,7 @@ const ProjectDetailBoard = ({ project, onBack, onUpdateProject, onToggleStatus }
                   <button onClick={toggleSelectAll} className="focus:outline-none">
                      {selectedIds.length === currentMembers.length && currentMembers.length > 0 ? (
                        <CheckSquare className="w-4 h-4 text-[#FCC243]" />
-                     ) : (
+                      ) : (
                        <Square className="w-4 h-4 text-gray-300" />
                      )}
                    </button>
@@ -1156,7 +1162,7 @@ const ProjectDetailBoard = ({ project, onBack, onUpdateProject, onToggleStatus }
               </div>
 
               {addModalTab === 'archive' ? (
-                <>
+                <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
                   <div className="p-4 border-b border-gray-100 bg-white">
                     <p className="text-sm text-gray-500 mb-3"><strong className="text-[#3C478F]">위원 정보 보관함</strong>에 저장된 명단입니다.</p>
                     <div className="relative">
@@ -1199,7 +1205,7 @@ const ProjectDetailBoard = ({ project, onBack, onUpdateProject, onToggleStatus }
                       </div>
                     )}
                   </div>
-                </>
+                </div>
               ) : (
                 <div className="flex-1 p-6 flex flex-col bg-white">
                   <div 
@@ -1284,7 +1290,7 @@ const ProjectDetailBoard = ({ project, onBack, onUpdateProject, onToggleStatus }
                       <button 
                         onClick={handleAddSelectedProfiles}
                         disabled={selectedProfileIds.length === 0}
-                        className={`px-6 py-2 rounded-xl text-sm font-bold transition-all ${selectedProfileIds.length > 0 ? 'bg-[#3C478F] text-white shadow-md hover:bg-[#2A3266]' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
+                        className={`px-6 py-2 rounded-xl text-sm font-bold transition-all ${selectedProfileIds.length > 0 ? "bg-[#3C478F] text-white shadow-md hover:bg-[#2A3266]" : "bg-gray-200 text-gray-400 cursor-not-allowed"}`}
                       >
                         위원 추가하기
                       </button>
@@ -1300,7 +1306,6 @@ const ProjectDetailBoard = ({ project, onBack, onUpdateProject, onToggleStatus }
           </motion.div>
         )}
       </AnimatePresence>
-
       <ConfirmModal
         isOpen={confirmRemoveMembers}
         title="위원 제외"

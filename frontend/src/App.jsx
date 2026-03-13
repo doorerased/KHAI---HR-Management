@@ -5,6 +5,7 @@ import ProfileExtractor from './pages/ProfileExtractor';
 import MessageTemplate from './pages/MessageTemplate';
 import BankExtractor from './pages/BankExtractor';
 import ProjectManager from './pages/ProjectManager';
+import Guide from './pages/Guide';
 import SplashScreen from './components/SplashScreen';
 import { AnimatePresence } from 'framer-motion';
 
@@ -26,8 +27,9 @@ function App() {
       ) : (
         <Router>
           <Routes>
-            <Route path="/" element={<Navigate to="/project" replace />} />
+            <Route path="/" element={<Navigate to="/guide" replace />} />
             <Route element={<Layout />}>
+              <Route path="guide" element={<Guide />} />
               <Route path="profile" element={<ProfileExtractor />} />
               <Route path="message" element={<MessageTemplate />} />
               <Route path="project" element={<ProjectManager />} />

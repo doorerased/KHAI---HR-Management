@@ -1,11 +1,12 @@
 import React from 'react';
 import { Outlet, NavLink, useLocation } from 'react-router-dom';
-import { FileSearch, MessageSquareText, WalletCards, BriefcaseBusiness } from 'lucide-react';
+import { FileSearch, MessageSquareText, WalletCards, BriefcaseBusiness, HelpCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const Layout = () => {
   const location = useLocation();
   const navItems = [
+    { path: '/guide', label: '안내 가이드', icon: <HelpCircle className="w-5 h-5" /> },
     { path: '/project', label: '프로젝트 관리', icon: <BriefcaseBusiness className="w-5 h-5" /> },
     { path: '/profile', label: '위원 정보 가져오기', icon: <FileSearch className="w-5 h-5" /> },
     { path: '/bank', label: '정산 정보 가져오기', icon: <WalletCards className="w-5 h-5" /> },
@@ -65,7 +66,7 @@ const Layout = () => {
               <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse shadow-[0_0_6px_rgba(74,222,128,0.4)]" />
               <span className="text-[11px] font-bold text-gray-400">System Online</span>
             </div>
-            <span className="text-[10px] font-bold text-gray-300 tracking-wider">v1.0</span>
+            <span className="text-[10px] font-bold text-gray-300 tracking-wider">v1.2</span>
           </div>
         </div>
       </aside>

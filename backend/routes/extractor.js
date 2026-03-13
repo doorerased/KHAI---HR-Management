@@ -28,14 +28,16 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage, limits: { fileSize: 20 * 1024 * 1024 } });
 
 function parseProfileText(text, filename) {
+  // 인코딩 문제 방지를 위해 주요 키워드를 유니코드 이스케이프로 처리
+  // 이름(\uc774\ub984), 성명(\uc131\uba85), 생년월일(\uc0dd\ub144\uc6d4\uc77c) 등
   let normalizedText = text
     .replace(/[\r\n]+/g, ' ')
-    .replace(/이\s*름/g, '이름')
-    .replace(/성\s*명/g, '이름')
-    .replace(/생\s*년\s*월\s*일/g, '생년월일')
-    .replace(/소\s*속\s*및\s*연\s*락\s*처/g, '소속및연락처')
-    .replace(/전\s*문\s*분\s*야/g, '전문분야')
-    .replace(/학\s*력/g, '학력');
+    .replace(/\uc774\s*\ub984/g, '\uc774\ub984') // 이 름 -> 이름
+    .replace(/\uc131\s*\uba명/g, '\uc774\ub984') // 성 명 -> 이름
+    .replace(/\uc0dd\s*\ub144\s*\uc6d4\s*\uc77c/g, '\uc0dd\ub144\uc6d4\uc77c')
+    .replace(/\uc18c\s*\uc18d\s*\ubc0f\s*\uc5f0\s*\ub77d\s*\uc12d/g, '\uc18c\uc18d\ubc0f\uc5f0\ub77d\uc12d')
+    .replace(/\uc884\s*\ubb38\s*\ubd84\s*\uc57c/g, '\uc884\ubb38\ubd84\uc57c')
+    .replace(/\ud559\s*\ub825/g, '\ud559\ub825');
 
   const emailRegex = /([a-zA-Z0-9._%+-]+\s*@\s*[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/;
   const emailMatch = normalizedText.match(emailRegex);
@@ -49,7 +51,7 @@ function parseProfileText(text, filename) {
     if (!phone.includes('-')) phone = phone.replace(/(01[016789])(\d{3,4})(\d{4})/, '$1-$2-$3');
   }
 
-  const birthRegex = /((?:19|20)\d{2})[-.\s년]*(\d{1,2})[-.\s월]*(\d{1,2})[일]*/;
+  const birthRegex = /((?:19|20)\d{2})[-.\s\ub144]*(\d{1,2})[-.\s\uc6d4]*(\d{1,2})[\uc77c]*/;
   const birthMatch = normalizedText.match(birthRegex);
   let birth = '';
   if (birthMatch) {
@@ -61,28 +63,51 @@ function parseProfileText(text, filename) {
 
   let name = '';
   
-  // 1. 섹션 기반 추출 (이름 섹션 근처 텍스트)
-  const nameSectionRegex = /이름([\s\S]*?)(?:생년|소속|나이|전문|직업|학력|주소)/;
+  // 1. 섹션 기반 추출 (이름 섹션 근처 텍스트) - 최우선
+  // 이름(\uc774\ub984) 또는 성명(\uc131\uba85) 뒤의 텍스트 인식
+  const nameSectionRegex = /(?:\uc774\s*\ub984|\uc131\s*\uba85)\s*[:|]?\s*([가-힣\s]{2,10})(?:\s|\uc0dd\ub144|\uc18c\uc18d|\ub098\uc774|\uc884\ubb38|\uc9c1\uc5c5|\ud559\ub825|\uc81c\uc804|\uc5f0\ub77d|\uc774\uba54|\uacbd\ub825|\uc804\uacf5|\ud559\uc704|$)/;
   const nameSectionMatch = normalizedText.match(nameSectionRegex);
   if (nameSectionMatch) {
-    const rawName = nameSectionMatch[1].replace(/[^가-힣a-zA-Z]/g, '');
-    if (rawName.length >= 2) name = rawName.substring(0, 5);
+    const rawName = nameSectionMatch[1].trim().replace(/\s/g, '');
+    if (rawName.length >= 2 && rawName.length <= 5) name = rawName;
   }
 
-  // 2. 패턴 기반 추출 ('성명: OOO' 등 특정 키워드 패턴)
+  // 2. 패턴 기반 추출 (본문 내 이름 패턴 검색)
   if (!name) {
-    const alternativeNameMatch = normalizedText.match(/(?:이\s*름|성\s*명)\s*[:|]?\s*([가-힣]{2,5})/);
-    if(alternativeNameMatch) name = alternativeNameMatch[1];
+    // 귀하(\uadc0\ud558), 위원(\uc601\uc6d0) 등 패턴
+    const patternMatch = normalizedText.match(/([가-힣]{2,4})\s*(?:\uadc0\ud558|\uc704\uc6d0|\uac55\uc218|\ubc15\uc0ac|\uc804\ubb38\uac00|\ud3c9\uac00)/);
+    if (patternMatch) name = patternMatch[1];
   }
 
   // 3. 파일명 기반 추출 (가장 마지막 보루)
   if (!name && filename) {
-    const filenameMatch = filename.match(/^([가-힣]{2,5})[_ ]/);
-    if (filenameMatch) {
-      name = filenameMatch[1];
-    } else {
-        const singleNameMatch = filename.match(/^([가-힣]{2,5})\./);
-        if (singleNameMatch) name = singleNameMatch[1];
+    // 행정(\ud589\uc815), 관리(\uad00\ub9ac) 등 불용어 유니코드 처리
+    const skipWords = [
+      '\ud589\uc815', '\uad00\ub9ac', '\ud504\ub85c\ud544', '\ud30c\uc77c', 
+      '\uc704\uc6d0', '\ud3c9\uac00', '\uc804\ubb38\uac00', '\uc778\uc801', 
+      '\uc0ac\ud56d', '\uc774\ub825\uc11c', '\ubcf5\uc0ac\ubcf8'
+    ];
+    const baseFilename = filename.split('.')[0];
+    
+    const parts = baseFilename.split(/[_\s\-\(\)]+/);
+    for (const part of parts) {
+      const cleanPart = part.trim();
+      if (cleanPart.length >= 2 && cleanPart.length <= 4 && /^[가-힣]+$/.test(cleanPart)) {
+        if (!skipWords.some(word => cleanPart.includes(word))) {
+          name = cleanPart;
+          break;
+        }
+      }
+    }
+    
+    if (!name) {
+      const allNames = baseFilename.match(/[가-힣]{2,4}/g) || [];
+      for (const candidate of allNames) {
+        if (!skipWords.some(word => candidate.includes(word))) {
+          name = candidate;
+          break;
+        }
+      }
     }
   }
 
