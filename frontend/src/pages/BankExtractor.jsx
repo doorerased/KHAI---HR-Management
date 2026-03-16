@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { API_ENDPOINTS } from '../config/api';
 
-import { SearchCode, Loader2, Download, Table as TableIcon, AlignLeft, Save, Trash2, CheckSquare, Square, Search, ArrowUpDown, ArrowUp, ArrowDown, RefreshCw, WalletCards } from 'lucide-react';
+import { SearchCode, Loader2, Download, Table as TableIcon, AlignLeft, Save, Trash2, CheckSquare, Square, Search, ArrowUpDown, ArrowUp, ArrowDown, RefreshCw, WalletCards, ShieldCheck, CheckCircle2, SaveAll } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import * as XLSX from 'xlsx';
 import ProjectSaveModal from '../components/ProjectSaveModal';
@@ -49,15 +49,48 @@ const BankExtractor = () => {
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
   const [projectSaveSuccessMessage, setProjectSaveSuccessMessage] = useState('');
 
-  const saveToArchive = (newData) => {
+  const saveToArchive = (newData = extractedData) => {
     if (!newData || newData.length === 0) return;
     setArchivedData(prev => {
-      const updated = [...prev, ...newData.map((item, idx) => ({
-        ...item,
-        createdAt: Date.now() + idx,
-        archiveId: `bank_${Date.now() + idx}_${Math.random().toString(36).substr(2, 5)}`
-      }))];
-      return updated;
+      let updatedData = [...prev];
+      let foundDuplicates = [];
+
+      newData.forEach((newItem, index) => {
+        // 중복 판별 (이름과 주민번호가 동일하면 동일 인물로 판정)
+        const isDuplicate = (a, b) => 
+          a.name === b.name && a.residentId === b.residentId;
+        
+        const existingIndex = updatedData.findIndex(item => isDuplicate(item, newItem));
+        
+        const timestamp = Date.now() + index;
+        const newItemWithMetadata = {
+          ...newItem,
+          createdAt: timestamp,
+          archiveId: `bank_${timestamp}_${Math.random().toString(36).substr(2, 5)}`
+        };
+
+        if (existingIndex >= 0) {
+          // 중복 시 기존 기록을 덮어씌움 (새 추출 데이터로 최신화)
+          newItemWithMetadata.archiveId = updatedData[existingIndex].archiveId;
+          updatedData[existingIndex] = newItemWithMetadata;
+          foundDuplicates.push(newItem.name);
+        } else {
+          updatedData.push(newItemWithMetadata);
+        }
+      });
+
+      if (foundDuplicates.length > 0) {
+        const uniqueNames = [...new Set(foundDuplicates)];
+        setTimeout(() => {
+          setDuplicatesInfo({ count: uniqueNames.length, names: uniqueNames });
+        }, 100);
+      } else {
+        setShowSaveToast(true);
+        setTimeout(() => setShowSaveToast(false), 2000);
+      }
+
+      saveToLocalStorage(updatedData);
+      return updatedData;
     });
   };
 
@@ -78,20 +111,21 @@ const BankExtractor = () => {
 
     if (updated) {
       setArchivedData(migratedData);
+      saveToLocalStorage(migratedData); // Migrate and save immediately
     }
   }, []);
 
-  // archivedData 변경 시 로컬 스토리지 자동 저장 (용량 초과 에러 방지)
-  useEffect(() => {
-    try {
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(archivedData));
-    } catch (e) {
-      console.error('LocalStorage save failed:', e);
-      if (e.name === 'QuotaExceededError' || e.code === 22) {
-        alert('⚠️ 브라우저 저장 공간이 가득 찼습니다. 데이터 관리에서 백업 후 불필요한 항목을 삭제해주세요.');
-      }
-    }
-  }, [archivedData]);
+  // archivedData 변경 시 로컬 스토리지 자동 저장 (용량 초과 에러 방지) - REMOVED AUTO-SAVE
+  // useEffect(() => {
+  //   try {
+  //     localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(archivedData));
+  //   } catch (e) {
+  //     console.error('LocalStorage save failed:', e);
+  //     if (e.name === 'QuotaExceededError' || e.code === 22) {
+  //       alert('⚠️ 브라우저 저장 공간이 가득 찼습니다. 데이터 관리에서 백업 후 불필요한 항목을 삭제해주세요.');
+  //     }
+  //   }
+  // }, [archivedData]);
 
   // Ctrl+F 색인 단축키 및 Ctrl+S 저장 단축키 핸들러 (UI 알림용)
   useEffect(() => {
@@ -106,6 +140,7 @@ const BankExtractor = () => {
       // Ctrl+S
       if ((e.ctrlKey || e.metaKey) && e.key === 's') {
         e.preventDefault();
+        // This Ctrl+S is for saving the *current state* of archivedData (after inline edits)
         saveToLocalStorage(archivedData);
         setShowSaveToast(true);
         setTimeout(() => setShowSaveToast(false), 2000);
@@ -116,7 +151,14 @@ const BankExtractor = () => {
   }, [activeTab, archivedData]);
 
   const saveToLocalStorage = (data) => {
-    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(data));
+    try {
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(data));
+    } catch (e) {
+      console.error('LocalStorage save failed:', e);
+      if (e.name === 'QuotaExceededError' || e.code === 22) {
+        alert('⚠️ 브라우저 저장 공간이 가득 찼습니다. 데이터 관리에서 백업 후 불필요한 항목을 삭제해주세요.');
+      }
+    }
   };
 
   const handleAnalyze = async () => {
@@ -138,62 +180,24 @@ const BankExtractor = () => {
         console.error('Failed to load master DB', e);
       }
 
-
-      const response = await fetch(API_ENDPOINTS.EXTRACT_BANK, {
+      const response = await fetch('/api/extract/bank', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: inputText, dbNames, dbProfiles }),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ text: inputText, masterDbNames: dbNames }),
       });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || '서버 오류 발생');
+      }
 
       const result = await response.json();
       
-      if (!response.ok) {
-        throw new Error(result.error || `파싱 실패: ${response.statusText}`);
-      }
-
       if (result.success && result.data) {
         setExtractedData(result.data);
         setStatus('complete');
-        
-        // 추출된 결과를 보관함에 즉시 병합 및 LocalStorage 저장 (중복 방지 포함)
-        setArchivedData(prev => {
-          let updatedData = [...prev];
-          let foundDuplicates = [];
-
-          result.data.forEach((newItem, index) => {
-            // 중복 판별 (이름과 주민번호가 동일하면 동일 인물로 판정)
-            const isDuplicate = (a, b) => 
-              a.name === b.name && a.residentId === b.residentId;
-            
-            const existingIndex = updatedData.findIndex(item => isDuplicate(item, newItem));
-            
-            const timestamp = Date.now() + index;
-            const newItemWithMetadata = {
-              ...newItem,
-              createdAt: timestamp,
-              archiveId: `bank_${timestamp}_${Math.random().toString(36).substr(2, 5)}`
-            };
-
-            if (existingIndex >= 0) {
-              // 중복 시 기존 기록을 덮어씌움 (새 추출 데이터로 최신화)
-              newItemWithMetadata.archiveId = updatedData[existingIndex].archiveId;
-              updatedData[existingIndex] = newItemWithMetadata;
-              foundDuplicates.push(newItem.name);
-            } else {
-              updatedData.push(newItemWithMetadata);
-            }
-          });
-
-          if (foundDuplicates.length > 0) {
-            const uniqueNames = [...new Set(foundDuplicates)];
-            setTimeout(() => {
-              setDuplicatesInfo({ count: uniqueNames.length, names: uniqueNames });
-            }, 100);
-          }
-
-          saveToLocalStorage(updatedData);
-          return updatedData;
-        });
       } else {
         throw new Error(result.error);
       }
@@ -252,6 +256,7 @@ const BankExtractor = () => {
         if (!item.archiveId) return true;
         return !selectedIds.includes(item.archiveId);
       });
+      saveToLocalStorage(nextData); // Save changes to localStorage after deletion
       return nextData;
     });
     setSelectedIds([]);
@@ -413,7 +418,7 @@ const BankExtractor = () => {
                 {status === 'analyzing' && (
                   <div className="absolute inset-0 bg-white/80 backdrop-blur-sm flex flex-col items-center justify-center z-10 transition-all rounded-b-3xl">
                     <Loader2 className="w-10 h-10 text-[#3C478F] animate-spin mb-3" />
-                    <p className="text-[#111827] font-bold">인공지능 분석 중...</p>
+                    <p className="text-[#111827] font-bold">분석 중...</p>
                   </div>
                 )}
                 <div className="mt-2 pt-4 border-t border-gray-100 flex justify-end">
@@ -454,9 +459,15 @@ const BankExtractor = () => {
                         <TableIcon className="w-5 h-5 mr-3 text-[#FCC243]" />
                         최근 추출 결과
                       </div>
-                      <div className="flex space-x-2 items-center">
+                      <div className="flex space-x-3 items-center">
+                        <button 
+                          onClick={() => saveToArchive()}
+                          className="flex items-center space-x-2 px-5 py-2.5 bg-[#3C478F] text-white text-[13px] font-bold rounded-full hover:bg-[#2A3266] transition-all shadow-sm"
+                        >
+                          <SaveAll className="w-4 h-4" />
+                          <span>보관함 저장</span>
+                        </button>
                         <button onClick={() => setIsProjectModalOpen(true)} className="px-5 py-2.5 bg-[#FCC243] text-yellow-900 text-[13px] font-bold rounded-full hover:bg-yellow-400 transition-colors shadow-sm whitespace-nowrap">프로젝트 바로 저장</button>
-                        <div className="text-[11px] font-bold text-[#3C478F] bg-[#FAFAFA] px-3 py-2 rounded-full uppercase tracking-widest h-fit whitespace-nowrap">보관함 자동 저장됨</div>
                       </div>
                     </div>
                     <div className="flex-1 overflow-x-auto">
@@ -474,7 +485,16 @@ const BankExtractor = () => {
                           {extractedData.map((row) => (
                             <tr key={row.id || Math.random()} className="border-b border-gray-50 bg-white hover:bg-[#FAFAFA] transition-colors">
                               <td className="px-6 py-5 font-black text-[#111827] whitespace-nowrap text-center">{row.name}</td>
-                              <td className="px-6 py-5 font-mono text-gray-600 whitespace-nowrap text-center">{row.residentId}</td>
+                              <td className="px-6 py-5 font-mono text-gray-600 whitespace-nowrap text-center">
+                                <div className="flex items-center justify-center space-x-2">
+                                   <span>{row.residentId}</span>
+                                  {row.isValidRRN ? (
+                                    <CheckCircle2 className="w-4 h-4 text-green-500" title="표준 알고리즘 검증 완료" />
+                                  ) : (
+                                    <ShieldCheck className="w-4 h-4 text-gray-300" title="검증 전용 주민번호" />
+                                  )}
+                                </div>
+                              </td>
                               <td className="px-6 py-5 font-bold text-[#3C478F] whitespace-nowrap text-center">{row.bank}</td>
                               <td className="px-6 py-5 font-mono text-gray-600 whitespace-nowrap text-center">{row.account}</td>
                               <td className="px-6 py-5 text-xs font-bold whitespace-nowrap text-center">

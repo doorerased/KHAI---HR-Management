@@ -9,6 +9,12 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// 요청 로그 미들웨어
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+  next();
+});
+
 // 라우터 연결
 app.use('/api/extract', extractorRouter);
 
@@ -16,8 +22,9 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: '평가 위원 관리 백엔드 서버 정상 작동 중' });
 });
 
-app.listen(PORT, () => {
-  console.log(`[Backend] Server is running on port ${PORT}`);
+const HOST = '0.0.0.0';
+app.listen(PORT, HOST, () => {
+  console.log(`[Backend] Server is running on http://${HOST}:${PORT}`);
 });
 
 // 전역 에러 핸들러 (Multer 에러 등 HTML 500 응답 방지용)

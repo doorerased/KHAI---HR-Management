@@ -84,7 +84,10 @@ function parseProfileText(text, filename) {
 
     let name = '';
     const titles = ['위원', '교수', '박사', '님', '대표', '강사', '연구원', '주무관', '사무관', '팀장', '과장', '성명', '이름'];
-    const skipWords = ['행정', '관리', '프로필', '파일', '위원', '파일', '전문가', '인적', '사항', '이력서', '복사본', '전문', '역량', '평가', '설명'];
+    const skipWords = [
+      '행정', '관리', '프로필', '파일', '위원', '평가', '전문가', '인적', 
+      '사항', '이력서', '복사본', '전문', '역량'
+    ];
 
     // 4. 이름 추출 (파일명 우선)
     if (filename) {
@@ -102,7 +105,7 @@ function parseProfileText(text, filename) {
 
     // 5. 이름 추출 (섹션 기반)
     if (!name) {
-      const nameSectionRegex = /(?:\uc774\s*\ub984|\uc131\s*\uba85)\s*[:|]?\s*([가-힣\s]{2,10})(?:\s|\uc0dd\ub144|\uc18c\uc18d|\ub098\uc774|\uc884\ubb38|\uc9c1\uc5c5|\ud559\ub825|\uc81c\uc804|\uc5f0\ub77d|\uc774\uba54|\uacbd\ub825|\uc804\uacf5|\ud559\uc704|$)/;
+      const nameSectionRegex = /(?:\uc774\s*\ub984|\uc131\s*\uba85)\s*[:|]?\s*([가-힣\s]{2,10})(?:\s|\uc0dd\ub144|\uc18c\uc18d|\ub098\uc774|\uc884\ubb38|\uc9c1\uc5c5|\ud559\ub825|\uc81c\uc804|\uc5f0\ub77d|\uc774\uba54|\uacbd\ub825|\uc81c\uacf5|\uc804\uacf5|\ud559\uc704|$)/;
       const nameSectionMatch = normalizedText.match(nameSectionRegex);
       if (nameSectionMatch) {
         let rawName = nameSectionMatch[1].trim().replace(/\s/g, '');

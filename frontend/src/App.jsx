@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './layouts/Layout';
 import ProfileExtractor from './pages/ProfileExtractor';
 import MessageTemplate from './pages/MessageTemplate';
@@ -36,6 +36,8 @@ function App() {
               <Route path="bank" element={<BankExtractor />} />
             </Route>
           </Routes>
+          {/* Version display moved outside of Routes to ensure syntactical correctness */}
+          <span className="text-[10px] font-bold text-gray-300 tracking-wider">v1.7</span>
         </Router>
       )}
     </>

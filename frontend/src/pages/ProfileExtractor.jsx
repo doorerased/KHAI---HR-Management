@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { API_ENDPOINTS } from '../config/api';
 
-import { UploadCloud, FileType2, Loader2, Download, Table as TableIcon, Trash2, CheckSquare, Square, Save, Search, ArrowUpDown, ArrowUp, ArrowDown, RefreshCw, FileSearch, FolderPlus } from 'lucide-react';
+import { UploadCloud, FileType2, Loader2, Download, Table as TableIcon, Trash2, CheckSquare, Square, Save, Search, ArrowUpDown, ArrowUp, ArrowDown, RefreshCw, FileSearch, FolderPlus, SaveAll } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import * as XLSX from 'xlsx';
 import ProjectSaveModal from '../components/ProjectSaveModal';
@@ -90,22 +90,11 @@ const ProfileExtractor = () => {
 
     if (updated) {
       setArchivedData(migratedData);
+      saveToLocalStorage(migratedData); // 마이그레이션 후 저장
     }
   }, []);
 
-  // archivedData 변경 시 로컬 스토리지 자동 저장 (용량 초과 에러 방지)
-  useEffect(() => {
-    try {
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(archivedData));
-    } catch (e) {
-      console.error('LocalStorage save failed:', e);
-      if (e.name === 'QuotaExceededError' || e.code === 22) { // e.code === 22 for Safari/iOS
-        alert('⚠️ 브라우저 저장 공간이 가득 찼습니다. 데이터 관리에서 백업 후 불필요한 항목을 삭제해주세요.');
-      }
-    }
-  }, [archivedData]);
-
-  const saveToArchive = (newData) => {
+  const saveToArchive = (newData = extractedData) => {
     if (!newData || newData.length === 0) return;
 
     setArchivedData(prev => {
@@ -139,8 +128,12 @@ const ProfileExtractor = () => {
         setTimeout(() => {
           setDuplicatesInfo({ count: uniqueNames.length, names: uniqueNames });
         }, 100);
+      } else {
+        setShowSaveToast(true);
+        setTimeout(() => setShowSaveToast(false), 2000);
       }
       
+      saveToLocalStorage(updatedData);
       return updatedData;
     });
   };
@@ -214,7 +207,7 @@ const ProfileExtractor = () => {
       formData.append('realFilename', file.name);
 
       try {
-        const response = await fetch(API_ENDPOINTS.EXTRACT_PROFILE, {
+        const response = await fetch('/api/extract/profile', {
           method: 'POST',
           body: formData,
         });
@@ -247,7 +240,6 @@ const ProfileExtractor = () => {
     } else {
       if (errorDetails.length > 0) setErrorMsg(`일부 파일 실패: ${errorDetails.join(' / ')}`);
       setStatus('complete');
-      if (allData.length > 0) saveToArchive(allData);
     }
   };
 
@@ -294,6 +286,7 @@ const ProfileExtractor = () => {
   const executeDelete = () => {
     setArchivedData(prev => {
       const nextData = prev.filter(item => !selectedIds.includes(item.archiveId));
+      saveToLocalStorage(nextData); // 삭제 후 저장
       return nextData;
     });
     setSelectedIds([]);
@@ -528,8 +521,17 @@ const ProfileExtractor = () => {
                         추출 결과
                       </div>
                       <div className="flex space-x-2">
-                        <button onClick={() => setIsProjectModalOpen(true)} className="px-5 py-2.5 bg-[#FCC243] text-yellow-900 text-sm font-bold rounded-full hover:bg-yellow-400 transition-colors shadow-sm">프로젝트 바로 저장</button>
-                        <button onClick={() => setActiveTab('archive')} className="px-5 py-2.5 bg-[#3C478F] text-white text-sm font-bold rounded-full hover:bg-[#2A3266] transition-colors">보관함 이동</button>
+                        <button 
+                          onClick={() => saveToArchive()}
+                          className="flex items-center space-x-2 px-5 py-2.5 bg-[#3C478F] text-white text-sm font-bold rounded-full hover:bg-[#2A3266] transition-all shadow-sm"
+                        >
+                          <SaveAll className="w-4 h-4" />
+                          <span>보관함 저장</span>
+                        </button>
+                        <button onClick={() => {
+                          setDataForProject(extractedData);
+                          setIsProjectModalOpen(true);
+                        }} className="px-5 py-2.5 bg-[#FCC243] text-yellow-900 text-sm font-bold rounded-full hover:bg-yellow-400 transition-colors shadow-sm">프로젝트 바로 저장</button>
                       </div>
                     </div>
                     <div className="overflow-x-auto">

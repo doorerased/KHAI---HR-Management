@@ -606,12 +606,18 @@ const ProjectDetailBoard = ({ project, onBack, onUpdateProject, onToggleStatus }
           (m.institution && m.institution.toLowerCase().includes(searchQuery.toLowerCase()))
         )
         .sort((a, b) => {
-          if (sortConfig.key === 'statusSelection') {
+          const { key, direction } = sortConfig;
+          let valA = a[key] || '';
+          let valB = b[key] || '';
+
+          if (key === 'statusSelection') {
             const weight = { '선정': 3, '미선정': 2, '대기': 1 };
-            const valA = weight[a.statusSelection] || 0;
-            const valB = weight[b.statusSelection] || 0;
-            return sortConfig.direction === 'asc' ? valA - valB : valB - valA;
+            valA = weight[valA] || 0;
+            valB = weight[valB] || 0;
           }
+
+          if (valA < valB) return direction === 'asc' ? -1 : 1;
+          if (valA > valB) return direction === 'asc' ? 1 : -1;
           return 0;
         });
     }
@@ -636,12 +642,18 @@ const ProjectDetailBoard = ({ project, onBack, onUpdateProject, onToggleStatus }
       (m.institution && m.institution.toLowerCase().includes(searchQuery.toLowerCase()))
     )
     .sort((a, b) => {
-      if (sortConfig.key === 'statusSelection') {
+      const { key, direction } = sortConfig;
+      let valA = a[key] || '';
+      let valB = b[key] || '';
+
+      if (key === 'statusSelection') {
         const weight = { '선정': 3, '미선정': 2, '대기': 1 };
-        const valA = weight[a.statusSelection] || 0;
-        const valB = weight[b.statusSelection] || 0;
-        return sortConfig.direction === 'asc' ? valA - valB : valB - valA;
+        valA = weight[valA] || 0;
+        valB = weight[valB] || 0;
       }
+
+      if (valA < valB) return direction === 'asc' ? -1 : 1;
+      if (valA > valB) return direction === 'asc' ? 1 : -1;
       return 0;
     });
   }, [members, searchQuery, sortConfig]);
@@ -985,20 +997,49 @@ const ProjectDetailBoard = ({ project, onBack, onUpdateProject, onToggleStatus }
                 >
                   기관명
                 </th>
-                <th className="px-4 py-3 bg-white font-bold border-b border-gray-100 whitespace-nowrap min-w-[100px] text-center">
-                  <select 
-                    onChange={(e) => handleBulkUpdateType(e.target.value)}
-                    value=""
-                    className="bg-transparent border-none text-[11px] font-bold text-[#111827] focus:outline-none cursor-pointer appearance-none text-center hover:text-[#FCC243] transition-colors"
-                  >
-                    <option value="" disabled>구분</option>
-                    <option value="서류">일괄 서류</option>
-                    <option value="면접">일괄 면접</option>
-                    <option value="논술">일괄 논술</option>
-                  </select>
+                <th 
+                  className="px-4 py-3 bg-white font-bold border-b border-gray-100 whitespace-nowrap min-w-[100px] text-center cursor-pointer hover:bg-gray-50 transition-colors group"
+                  onClick={() => requestSort('type')}
+                >
+                  <div className="flex items-center justify-center gap-1">
+                    <select 
+                      onClick={(e) => e.stopPropagation()}
+                      onChange={(e) => handleBulkUpdateType(e.target.value)}
+                      value=""
+                      className="bg-transparent border-none text-[11px] font-bold text-[#111827] focus:outline-none cursor-pointer appearance-none text-center hover:text-[#FCC243] transition-colors"
+                    >
+                      <option value="" disabled>구분</option>
+                      <option value="서류">일괄 서류</option>
+                      <option value="면접">일괄 면접</option>
+                      <option value="논술">일괄 논술</option>
+                    </select>
+                    <span className={`transition-opacity ${sortConfig.key === 'type' ? 'opacity-100' : 'opacity-0 group-hover:opacity-30'}`}>
+                      {sortConfig.key === 'type' && sortConfig.direction === 'asc' ? '▲' : '▼'}
+                    </span>
+                  </div>
                 </th>
-                <th className="px-4 py-3 bg-white font-bold border-b border-gray-100 whitespace-nowrap min-w-[100px] text-center">분야</th>
-                <th className="px-4 py-3 bg-white font-bold border-b border-gray-100 whitespace-nowrap text-center min-w-[120px]">일정</th>
+                <th 
+                  className="px-4 py-3 bg-white font-bold border-b border-gray-100 whitespace-nowrap min-w-[100px] text-center cursor-pointer hover:bg-gray-50 transition-colors group"
+                  onClick={() => requestSort('field')}
+                >
+                  <div className="flex items-center justify-center gap-1">
+                    분야
+                    <span className={`transition-opacity ${sortConfig.key === 'field' ? 'opacity-100' : 'opacity-0 group-hover:opacity-30'}`}>
+                      {sortConfig.key === 'field' && sortConfig.direction === 'asc' ? '▲' : '▼'}
+                    </span>
+                  </div>
+                </th>
+                <th 
+                  className="px-4 py-3 bg-white font-bold border-b border-gray-100 whitespace-nowrap text-center min-w-[120px] cursor-pointer hover:bg-gray-50 transition-colors group"
+                  onClick={() => requestSort('schedule')}
+                >
+                  <div className="flex items-center justify-center gap-1">
+                    일정
+                    <span className={`transition-opacity ${sortConfig.key === 'schedule' ? 'opacity-100' : 'opacity-0 group-hover:opacity-30'}`}>
+                      {sortConfig.key === 'schedule' && sortConfig.direction === 'asc' ? '▲' : '▼'}
+                    </span>
+                  </div>
+                </th>
                 <th 
                   className="px-4 py-3 bg-white font-bold border-b border-gray-100 border-r whitespace-nowrap text-center min-w-[100px] cursor-pointer hover:bg-gray-50 transition-colors group"
                   onClick={() => requestSort('statusSelection')}
@@ -1234,7 +1275,7 @@ const ProjectDetailBoard = ({ project, onBack, onUpdateProject, onToggleStatus }
                     {isAnalyzing ? (
                       <div className="flex flex-col items-center">
                         <Loader2 className="w-12 h-12 text-[#3C478F] animate-spin mb-4" />
-                        <p className="font-black text-[#111827]">서버 분석 중...</p>
+                        <p className="font-black text-[#111827]">분석 중...</p>
                         <p className="text-xs text-gray-400 mt-2">파일이 많을수록 시간이 더 걸릴 수 있습니다.</p>
                       </div>
                     ) : tempExtractedData.length > 0 ? (
