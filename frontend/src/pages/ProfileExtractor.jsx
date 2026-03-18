@@ -27,8 +27,6 @@ const ProfileExtractor = () => {
       return Array.isArray(parsed) ? parsed : [];
     } catch (e) {
       console.error('Failed to parse saved profiles', e);
-      // 데이터가 깨진 경우 바로 초기화하지 않고 사용자에게 알릴 수 있도록 null 반환 고려 가능하나
-      // 여기서는 안전하게 기존 로직 유지하되 에러 로그를 명확히 남김
       return [];
     }
   });
@@ -73,7 +71,7 @@ const ProfileExtractor = () => {
     localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(data));
   };
 
-  // 데이터 저장 및 마이그레이션: 모든 항목에 archiveId가 있는지 확인 (레거시 데이터 대응)
+  // 데이터 마이그레이션: 모든 항목에 archiveId가 있는지 확인 (레거시 데이터 대응)
   useEffect(() => {
     let updated = false;
     const migratedData = archivedData.map((item, index) => {
@@ -535,7 +533,7 @@ const ProfileExtractor = () => {
                       </div>
                     </div>
                     <div className="overflow-x-auto">
-                      <table className="w-full text-[15px] text-left">
+                      <table className="w-full text-[13px] text-left">
                         <thead className="text-[13px] text-gray-400 border-b border-gray-100">
                           <tr>
                             <th className="px-8 py-5">이름</th>
@@ -547,10 +545,10 @@ const ProfileExtractor = () => {
                         <tbody>
                           {extractedData.map((row, idx) => (
                             <tr key={idx} className="border-b border-gray-50 hover:bg-[#FAFAFA] transition-colors">
-                              <td className="px-8 py-3 font-black text-[#111827]">{row.name}</td>
-                              <td className="px-8 py-3 font-mono text-gray-600">{row.birth}</td>
-                              <td className="px-8 py-3 font-mono text-gray-600">{row.phone}</td>
-                              <td className="px-8 py-3 text-[#3C478F]">{row.email}</td>
+                              <td className="px-8 py-3 font-black text-[#111827] text-[13px]">{row.name}</td>
+                              <td className="px-8 py-3 font-mono text-gray-600 text-[13px]">{row.birth}</td>
+                              <td className="px-8 py-3 font-mono text-gray-600 text-[13px]">{row.phone}</td>
+                              <td className="px-8 py-3 text-[#3C478F] text-[13px]">{row.email}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -618,7 +616,7 @@ const ProfileExtractor = () => {
                  </div>
                </div>
                <div className="flex-1 overflow-auto bg-white">
-                 <table className="w-full text-sm text-left">
+                 <table className="w-full text-[13px] text-left">
                    <thead className="text-[13px] text-gray-400 bg-white border-b border-gray-100 sticky top-0">
                     <tr>
                       <th className="px-5 py-5 w-12 text-center">
@@ -654,7 +652,7 @@ const ProfileExtractor = () => {
                               type="text"
                               value={row.name}
                               onChange={(e) => handleEditCell(row.archiveId, 'name', e.target.value)}
-                              className={`w-full px-3 py-2 bg-transparent border-none focus:bg-white focus:ring-2 focus:ring-[#3C478F]/20 rounded-lg font-black text-[14px] text-center ${isSelected ? 'text-[#3C478F]' : 'text-[#111827]'} transition-all outline-none`}
+                              className={`w-full px-3 py-2 bg-transparent border-none focus:bg-white focus:ring-2 focus:ring-[#3C478F]/20 rounded-lg font-black text-[13px] text-center ${isSelected ? 'text-[#3C478F]' : 'text-[#111827]'} transition-all outline-none`}
                             />
                           </td>
                           <td className="px-4 py-2 text-center">
@@ -662,7 +660,7 @@ const ProfileExtractor = () => {
                               type="text"
                               value={row.birth}
                               onChange={(e) => handleEditCell(row.archiveId, 'birth', e.target.value)}
-                              className="w-full px-3 py-2 bg-transparent border-none focus:bg-white focus:ring-2 focus:ring-[#3C478F]/20 rounded-lg font-mono text-gray-600 text-center transition-all outline-none"
+                              className="w-full px-3 py-2 bg-transparent border-none focus:bg-white focus:ring-2 focus:ring-[#3C478F]/20 rounded-lg font-mono text-gray-600 text-center text-[13px] transition-all outline-none"
                             />
                           </td>
                           <td className="px-4 py-2 text-center">
@@ -670,7 +668,7 @@ const ProfileExtractor = () => {
                               type="text"
                               value={row.phone}
                               onChange={(e) => handleEditCell(row.archiveId, 'phone', e.target.value)}
-                              className="w-full px-3 py-2 bg-transparent border-none focus:bg-white focus:ring-2 focus:ring-[#3C478F]/20 rounded-lg font-mono text-gray-600 text-center transition-all outline-none"
+                              className="w-full px-3 py-2 bg-transparent border-none focus:bg-white focus:ring-2 focus:ring-[#3C478F]/20 rounded-lg font-mono text-gray-600 text-center text-[13px] transition-all outline-none"
                             />
                           </td>
                           <td className="px-4 py-2 text-center">
@@ -678,11 +676,19 @@ const ProfileExtractor = () => {
                               type="text"
                               value={row.email}
                               onChange={(e) => handleEditCell(row.archiveId, 'email', e.target.value)}
-                              className="w-full px-3 py-2 bg-transparent border-none focus:bg-white focus:ring-2 focus:ring-[#3C478F]/20 rounded-lg text-gray-500 text-center text-[14px] transition-all outline-none"
+                              className="w-full px-3 py-2 bg-transparent border-none focus:bg-white focus:ring-2 focus:ring-[#3C478F]/20 rounded-lg text-gray-500 text-center text-[13px] transition-all outline-none"
                             />
                           </td>
-                          <td className="px-4 py-3 font-mono text-gray-400 text-[11px] bg-gray-50/50 text-center">
-                            {row.createdAt ? new Date(row.createdAt).toLocaleString() : ''}
+                          <td 
+                            className="px-4 py-3 font-mono text-gray-400 text-[13px] bg-gray-50/50 text-center cursor-help"
+                            title={row.createdAt ? new Date(row.createdAt).toLocaleString() : ''}
+                          >
+                            {row.createdAt ? (
+                              (() => {
+                                const d = new Date(row.createdAt);
+                                return `${String(d.getFullYear()).slice(-2)}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
+                              })()
+                            ) : ''}
                           </td>
                         </tr>
                       );

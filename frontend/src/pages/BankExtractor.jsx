@@ -115,18 +115,6 @@ const BankExtractor = () => {
     }
   }, []);
 
-  // archivedData 변경 시 로컬 스토리지 자동 저장 (용량 초과 에러 방지) - REMOVED AUTO-SAVE
-  // useEffect(() => {
-  //   try {
-  //     localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(archivedData));
-  //   } catch (e) {
-  //     console.error('LocalStorage save failed:', e);
-  //     if (e.name === 'QuotaExceededError' || e.code === 22) {
-  //       alert('⚠️ 브라우저 저장 공간이 가득 찼습니다. 데이터 관리에서 백업 후 불필요한 항목을 삭제해주세요.');
-  //     }
-  //   }
-  // }, [archivedData]);
-
   // Ctrl+F 색인 단축키 및 Ctrl+S 저장 단축키 핸들러 (UI 알림용)
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -471,8 +459,8 @@ const BankExtractor = () => {
                       </div>
                     </div>
                     <div className="flex-1 overflow-x-auto">
-                      <table className="w-full text-[14px] text-center">
-                        <thead className="text-[12px] text-gray-400 bg-white border-b border-gray-100 uppercase tracking-wider sticky top-0">
+                      <table className="w-full text-[13px] text-center">
+                        <thead className="text-[13px] text-gray-400 bg-white border-b border-gray-100 uppercase tracking-wider sticky top-0">
                           <tr>
                             <th className="px-6 py-4 font-bold text-center">이름</th>
                             <th className="px-6 py-4 font-bold text-center">주민번호</th>
@@ -484,8 +472,8 @@ const BankExtractor = () => {
                         <tbody>
                           {extractedData.map((row) => (
                             <tr key={row.id || Math.random()} className="border-b border-gray-50 bg-white hover:bg-[#FAFAFA] transition-colors">
-                              <td className="px-6 py-5 font-black text-[#111827] whitespace-nowrap text-center">{row.name}</td>
-                              <td className="px-6 py-5 font-mono text-gray-600 whitespace-nowrap text-center">
+                              <td className="px-6 py-5 font-black text-[#111827] whitespace-nowrap text-center text-[13px]">{row.name}</td>
+                              <td className="px-6 py-5 font-mono text-gray-600 whitespace-nowrap text-center text-[13px]">
                                 <div className="flex items-center justify-center space-x-2">
                                    <span>{row.residentId}</span>
                                   {row.isValidRRN ? (
@@ -495,10 +483,10 @@ const BankExtractor = () => {
                                   )}
                                 </div>
                               </td>
-                              <td className="px-6 py-5 font-bold text-[#3C478F] whitespace-nowrap text-center">{row.bank}</td>
-                              <td className="px-6 py-5 font-mono text-gray-600 whitespace-nowrap text-center">{row.account}</td>
+                              <td className="px-6 py-5 font-bold text-[#3C478F] whitespace-nowrap text-center text-[13px]">{row.bank}</td>
+                              <td className="px-6 py-5 font-mono text-gray-600 whitespace-nowrap text-center text-[13px]">{row.account}</td>
                               <td className="px-6 py-5 text-xs font-bold whitespace-nowrap text-center">
-                                <span className={`px-3 py-1.5 rounded-full ${row.incomeCategory === '기타 소득' ? 'bg-[#FCC243]/20 text-yellow-800' : 'bg-[#FAFAFA] text-[#3C478F]'}`}>
+                                <span className={`px-3 py-1.5 rounded-full text-[13px] ${row.incomeCategory === '기타 소득' ? 'bg-[#FCC243]/20 text-yellow-800' : 'bg-[#FAFAFA] text-[#3C478F]'}`}>
                                   {row.incomeCategory}
                                 </span>
                               </td>
@@ -592,8 +580,8 @@ const BankExtractor = () => {
                 </div>
              ) : (
                 <div className="flex-1 overflow-auto bg-white relative">
-                  <table className="w-full text-[14px] text-left">
-                    <thead className="text-[12px] text-gray-400 bg-white border-b border-gray-100 uppercase tracking-wider sticky top-0 z-10">
+                  <table className="w-full text-[13px] text-left">
+                    <thead className="text-[13px] text-gray-400 bg-white border-b border-gray-100 uppercase tracking-wider sticky top-0 z-10">
                       <tr>
                         <th scope="col" className="px-5 py-5 w-12 text-center">
                            <button onClick={toggleSelectAll} className="focus:outline-none transition-transform hover:scale-110">
@@ -626,8 +614,6 @@ const BankExtractor = () => {
                       ) : (
                         processedData.map((row) => {
                           const isSelected = selectedIds.includes(row.archiveId);
-                          const dateObj = row.createdAt ? new Date(row.createdAt) : new Date();
-                          const dateStr = `${dateObj.getFullYear()}.${String(dateObj.getMonth()+1).padStart(2,'0')}.${String(dateObj.getDate()).padStart(2,'0')} ${String(dateObj.getHours()).padStart(2,'0')}:${String(dateObj.getMinutes()).padStart(2,'0')}`;
                           return (
                             <tr 
                               key={row.archiveId} 
@@ -649,7 +635,7 @@ const BankExtractor = () => {
                                   type="text"
                                   value={row.name}
                                   onChange={(e) => handleEditCell(row.archiveId, 'name', e.target.value)}
-                                  className={`w-full px-3 py-2 bg-transparent border-none focus:bg-white focus:ring-2 focus:ring-[#3C478F]/20 rounded-lg font-black text-[14px] text-center ${isSelected ? 'text-[#3C478F]' : 'text-[#111827]'} transition-all outline-none`}
+                                  className={`w-full px-3 py-2 bg-transparent border-none focus:bg-white focus:ring-2 focus:ring-[#3C478F]/20 rounded-lg font-black text-[13px] text-center ${isSelected ? 'text-[#3C478F]' : 'text-[#111827]'} transition-all outline-none`}
                                 />
                               </td>
                               <td className="px-4 py-2 text-center">
@@ -657,7 +643,7 @@ const BankExtractor = () => {
                                   type="text"
                                   value={row.residentId}
                                   onChange={(e) => handleEditCell(row.archiveId, 'residentId', e.target.value)}
-                                  className="w-full px-3 py-2 bg-transparent border-none focus:bg-white focus:ring-2 focus:ring-[#3C478F]/20 rounded-lg font-mono text-gray-600 text-center transition-all outline-none"
+                                  className="w-full px-3 py-2 bg-transparent border-none focus:bg-white focus:ring-2 focus:ring-[#3C478F]/20 rounded-lg font-mono text-gray-600 text-center text-[13px] transition-all outline-none"
                                 />
                               </td>
                               <td className="px-4 py-2 align-middle">
@@ -672,7 +658,7 @@ const BankExtractor = () => {
                                           handleEditCell(row.archiveId, 'bank', e.target.value);
                                         }
                                       }}
-                                      className={`w-full px-3 py-2 bg-transparent border-none focus:bg-white focus:ring-2 focus:ring-[#3C478F]/20 rounded-lg font-bold text-[14px] text-center ${isSelected ? 'text-[#3C478F]' : 'text-[#3C478F]'} transition-all outline-none cursor-pointer`}
+                                      className={`w-full px-3 py-2 bg-transparent border-none focus:bg-white focus:ring-2 focus:ring-[#3C478F]/20 rounded-lg font-bold text-[13px] text-center ${isSelected ? 'text-[#3C478F]' : 'text-[#3C478F]'} transition-all outline-none cursor-pointer`}
                                     >
                                       <option value="" disabled>은행 선택</option>
                                       {BANK_OPTIONS.map(bank => (
@@ -689,7 +675,7 @@ const BankExtractor = () => {
                                       onBlur={(e) => {
                                         if (!e.target.value.trim()) handleEditCell(row.archiveId, 'bank', '');
                                       }}
-                                      className={`w-full px-3 py-2 bg-white border border-gray-200 focus:ring-2 focus:ring-[#3C478F]/20 rounded-lg text-[14px] font-bold text-center ${isSelected ? 'text-[#3C478F]' : 'text-[#3C478F]'} transition-all outline-none shadow-sm`}
+                                      className={`w-full px-3 py-2 bg-white border border-gray-200 focus:ring-2 focus:ring-[#3C478F]/20 rounded-lg text-[13px] font-bold text-center ${isSelected ? 'text-[#3C478F]' : 'text-[#3C478F]'} transition-all outline-none shadow-sm`}
                                       autoFocus
                                     />
                                   )}
@@ -700,21 +686,29 @@ const BankExtractor = () => {
                                   type="text"
                                   value={row.account}
                                   onChange={(e) => handleEditCell(row.archiveId, 'account', e.target.value)}
-                                  className="w-full px-3 py-2 bg-transparent border-none focus:bg-white focus:ring-2 focus:ring-[#3C478F]/20 rounded-lg font-mono text-gray-600 text-center transition-all outline-none tracking-tight"
+                                  className="w-full px-3 py-2 bg-transparent border-none focus:bg-white focus:ring-2 focus:ring-[#3C478F]/20 rounded-lg font-mono text-gray-600 text-center text-[13px] transition-all outline-none tracking-tight"
                                 />
                               </td>
                               <td className="px-4 py-2 text-center">
                                 <select
                                   value={row.incomeCategory}
                                   onChange={(e) => handleEditCell(row.archiveId, 'incomeCategory', e.target.value)}
-                                  className={`w-full px-3 py-2 bg-transparent border-none focus:bg-white focus:ring-2 focus:ring-[#3C478F]/20 rounded-lg font-bold text-[14px] text-center transition-all outline-none cursor-pointer ${row.incomeCategory === '기타 소득' ? 'text-yellow-700' : 'text-[#3C478F]'}`}
+                                  className={`w-full px-3 py-2 bg-transparent border-none focus:bg-white focus:ring-2 focus:ring-[#3C478F]/20 rounded-lg font-bold text-[13px] text-center transition-all outline-none cursor-pointer ${row.incomeCategory === '기타 소득' ? 'text-yellow-700' : 'text-[#3C478F]'}`}
                                 >
                                   <option value="사업 소득">사업 소득</option>
                                   <option value="기타 소득">기타 소득</option>
                                 </select>
                               </td>
-                              <td className="px-4 py-3 font-mono text-gray-400 text-xs bg-gray-50/50 text-center">
-                                {dateStr}
+                              <td 
+                                className="px-4 py-3 font-mono text-gray-400 text-[13px] bg-gray-50/50 text-center cursor-help"
+                                title={row.createdAt ? new Date(row.createdAt).toLocaleString() : ''}
+                              >
+                                {row.createdAt ? (
+                                  (() => {
+                                    const d = new Date(row.createdAt);
+                                    return `${String(d.getFullYear()).slice(-2)}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
+                                  })()
+                                ) : ''}
                               </td>
                             </tr>
                           );
@@ -769,7 +763,7 @@ const BankExtractor = () => {
 
                 <button
                   onClick={() => setDuplicatesInfo(null)}
-                  className="w-full bg-primary-600 text-white font-medium py-2.5 rounded-lg hover:bg-primary-700 transition duration-150"
+                  className="w-full bg-[#3C478F] text-white font-medium py-2.5 rounded-lg hover:bg-[#2A3266] transition duration-150"
                 >
                   확인했습니다
                 </button>

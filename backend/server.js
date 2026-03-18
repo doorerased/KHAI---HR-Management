@@ -1,6 +1,6 @@
 const express = require('express');
 const cors = require('cors');
-const extractorRouter = require('./routes/extractor');
+const extractorRouter = require('./routes/extractor_final');
 
 const app = express();
 const PORT = process.env.PORT || 3000;

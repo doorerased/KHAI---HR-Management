@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { BriefcaseBusiness, FolderOpen, Plus, Search, MoreVertical, Table as TableIcon, Users, Calendar, Trash2, ArrowLeft, CheckSquare, Square, Download, CheckCircle2, X, Link as LinkIcon, UploadCloud, Loader2, Database, ShieldCheck, AlertTriangle } from 'lucide-react';
+import { BriefcaseBusiness, FolderOpen, Plus, Search, MoreVertical, Table as TableIcon, Users, Calendar, Trash2, ArrowLeft, CheckSquare, Square, Download, CheckCircle2, X, Link as LinkIcon, UploadCloud, Loader2, Database, ShieldCheck, AlertTriangle, Copy, ClipboardPaste } from 'lucide-react';
 import { API_ENDPOINTS } from '../config/api';
 import ConfirmModal from '../components/ConfirmModal';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -541,6 +541,9 @@ const ProjectDetailBoard = ({ project, onBack, onUpdateProject, onToggleStatus }
   // 토스트 메시지 상태
   const [saveToast, setSaveToast] = useState({ show: false, message: '' });
 
+  // 일정 복사/붙여넣기 상태
+  const [copiedSchedule, setCopiedSchedule] = useState(null);
+
   // 멤버 삭제 확인 모달 상태
   const [confirmRemoveMembers, setConfirmRemoveMembers] = useState(false);
 
@@ -998,7 +1001,7 @@ const ProjectDetailBoard = ({ project, onBack, onUpdateProject, onToggleStatus }
                   기관명
                 </th>
                 <th 
-                  className="px-4 py-3 bg-white font-bold border-b border-gray-100 whitespace-nowrap min-w-[100px] text-center cursor-pointer hover:bg-gray-50 transition-colors group"
+                  className="px-4 py-3 bg-white font-bold border-b border-gray-100 whitespace-nowrap min-w-[100px] text-center cursor-pointer hover:bg-gray-50 transition-colors group text-[13px]"
                   onClick={() => requestSort('type')}
                 >
                   <div className="flex items-center justify-center gap-1">
@@ -1006,7 +1009,7 @@ const ProjectDetailBoard = ({ project, onBack, onUpdateProject, onToggleStatus }
                       onClick={(e) => e.stopPropagation()}
                       onChange={(e) => handleBulkUpdateType(e.target.value)}
                       value=""
-                      className="bg-transparent border-none text-[11px] font-bold text-[#111827] focus:outline-none cursor-pointer appearance-none text-center hover:text-[#FCC243] transition-colors"
+                      className="bg-transparent border-none text-[13px] font-bold text-[#111827] focus:outline-none cursor-pointer appearance-none text-center hover:text-[#FCC243] transition-colors"
                     >
                       <option value="" disabled>구분</option>
                       <option value="서류">일괄 서류</option>
@@ -1019,7 +1022,7 @@ const ProjectDetailBoard = ({ project, onBack, onUpdateProject, onToggleStatus }
                   </div>
                 </th>
                 <th 
-                  className="px-4 py-3 bg-white font-bold border-b border-gray-100 whitespace-nowrap min-w-[100px] text-center cursor-pointer hover:bg-gray-50 transition-colors group"
+                  className="px-4 py-3 bg-white font-bold border-b border-gray-100 whitespace-nowrap min-w-[100px] text-center cursor-pointer hover:bg-gray-50 transition-colors group text-[13px]"
                   onClick={() => requestSort('field')}
                 >
                   <div className="flex items-center justify-center gap-1">
@@ -1030,18 +1033,43 @@ const ProjectDetailBoard = ({ project, onBack, onUpdateProject, onToggleStatus }
                   </div>
                 </th>
                 <th 
-                  className="px-4 py-3 bg-white font-bold border-b border-gray-100 whitespace-nowrap text-center min-w-[120px] cursor-pointer hover:bg-gray-50 transition-colors group"
-                  onClick={() => requestSort('schedule')}
+                  className="px-4 py-3 bg-white font-bold border-b border-gray-100 whitespace-nowrap text-center min-w-[160px] cursor-pointer hover:bg-gray-50 transition-colors group text-[13px]"
+                  onClick={() => {
+                    if (copiedSchedule) {
+                      if (selectedIds.length > 0) {
+                        setMembers(prev => prev.map(m => selectedIds.includes(m.id) ? { ...m, schedule: copiedSchedule } : m));
+                        showToast(`${selectedIds.length}명에게 일정(${copiedSchedule})을 일괄 적용했습니다.`);
+                      } else {
+                        if (window.confirm(`전체 위원에게 일정(${copiedSchedule})을 적용하시겠습니까?`)) {
+                          setMembers(prev => prev.map(m => ({ ...m, schedule: copiedSchedule })));
+                          showToast(`전체 위원에게 일정(${copiedSchedule})을 일괄 적용했습니다.`);
+                        }
+                      }
+                    } else {
+                      requestSort('schedule');
+                    }
+                  }}
+                  title={copiedSchedule ? `클릭하여 ${selectedIds.length > 0 ? '선택된 위원' : '전체 위원'}에게 복사된 일정(${copiedSchedule}) 일괄 적용` : '클릭하여 정렬'}
                 >
-                  <div className="flex items-center justify-center gap-1">
-                    일정
-                    <span className={`transition-opacity ${sortConfig.key === 'schedule' ? 'opacity-100' : 'opacity-0 group-hover:opacity-30'}`}>
-                      {sortConfig.key === 'schedule' && sortConfig.direction === 'asc' ? '▲' : '▼'}
-                    </span>
+                  <div className="flex items-center justify-center gap-1.5">
+                    {copiedSchedule ? (
+                      <div className="flex items-center gap-1.5 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100 shadow-sm animate-pulse">
+                        <ClipboardPaste className="w-3.5 h-3.5 text-[#3C478F]" />
+                        <span className="text-[#3C478F] font-black text-[13px]">일정 붙여넣기</span>
+                      </div>
+                    ) : (
+                      <>
+                        <Calendar className="w-3.5 h-3.5 text-gray-400" />
+                        일정
+                        <span className={`transition-opacity ${sortConfig.key === 'schedule' ? 'opacity-100' : 'opacity-0 group-hover:opacity-30'}`}>
+                          {sortConfig.key === 'schedule' && sortConfig.direction === 'asc' ? '▲' : '▼'}
+                        </span>
+                      </>
+                    )}
                   </div>
                 </th>
                 <th 
-                  className="px-4 py-3 bg-white font-bold border-b border-gray-100 border-r whitespace-nowrap text-center min-w-[100px] cursor-pointer hover:bg-gray-50 transition-colors group"
+                  className="px-4 py-3 bg-white font-bold border-b border-gray-100 border-r whitespace-nowrap text-center min-w-[100px] cursor-pointer hover:bg-gray-50 transition-colors group text-[13px]"
                   onClick={() => requestSort('statusSelection')}
                 >
                   <div className="flex items-center justify-center gap-1">
@@ -1052,15 +1080,15 @@ const ProjectDetailBoard = ({ project, onBack, onUpdateProject, onToggleStatus }
                   </div>
                 </th>
 
-                <th className="px-4 py-3 bg-white font-bold border-b border-gray-100 whitespace-nowrap text-center">이름</th>
-                <th className="px-4 py-3 bg-white font-bold border-b border-gray-100 whitespace-nowrap text-center">생년월일</th>
-                <th className="px-4 py-3 bg-white font-bold border-b border-gray-100 whitespace-nowrap text-center">연락처</th>
-                <th className="px-4 py-3 bg-white font-bold border-b border-gray-100 border-r whitespace-nowrap text-center">이메일</th>
+                <th className="px-4 py-3 bg-white font-bold border-b border-gray-100 whitespace-nowrap text-center text-[13px]">이름</th>
+                <th className="px-4 py-3 bg-white font-bold border-b border-gray-100 whitespace-nowrap text-center text-[13px]">생년월일</th>
+                <th className="px-4 py-3 bg-white font-bold border-b border-gray-100 whitespace-nowrap text-center text-[13px]">연락처</th>
+                <th className="px-4 py-3 bg-white font-bold border-b border-gray-100 border-r whitespace-nowrap text-center text-[13px]">이메일</th>
 
-                <th className="px-4 py-3 bg-white font-bold border-b border-gray-100 whitespace-nowrap text-center">은행명</th>
-                <th className="px-4 py-3 bg-white font-bold border-b border-gray-100 whitespace-nowrap text-center">계좌번호</th>
-                <th className="px-4 py-3 bg-white font-bold border-b border-gray-100 whitespace-nowrap text-center">주민등록번호</th>
-                <th className="px-4 py-3 bg-white font-bold border-b border-gray-100 whitespace-nowrap text-center">소득구분</th>
+                <th className="px-4 py-3 bg-white font-bold border-b border-gray-100 whitespace-nowrap text-center text-[13px]">은행명</th>
+                <th className="px-4 py-3 bg-white font-bold border-b border-gray-100 whitespace-nowrap text-center text-[13px]">계좌번호</th>
+                <th className="px-4 py-3 bg-white font-bold border-b border-gray-100 whitespace-nowrap text-center text-[13px]">주민등록번호</th>
+                <th className="px-4 py-3 bg-white font-bold border-b border-gray-100 whitespace-nowrap text-center text-[13px]">소득구분</th>
               </tr>
             </thead>
             <tbody className="bg-white">
@@ -1081,14 +1109,14 @@ const ProjectDetailBoard = ({ project, onBack, onUpdateProject, onToggleStatus }
                         type="text"
                         value={row.institution || ''}
                         onChange={(e) => handleMemberChange(row.id, 'institution', e.target.value)}
-                        className="w-full bg-transparent border-none focus:ring-1 focus:ring-blue-200 rounded px-1 transition-shadow font-bold text-[#111827] text-xs text-center"
+                        className="w-full bg-transparent border-none focus:ring-1 focus:ring-blue-200 rounded px-1 transition-shadow font-bold text-[#111827] text-[13px] text-center"
                       />
                     </td>
                     <td className="px-4 py-3 text-center whitespace-nowrap">
                       <select 
                         value={row.type || '서류'}
                         onChange={(e) => handleMemberChange(row.id, 'type', e.target.value)}
-                        className="bg-transparent border-none text-[11px] text-gray-500 focus:outline-none cursor-pointer text-center appearance-none"
+                        className="bg-transparent border-none text-[13px] text-gray-500 focus:outline-none cursor-pointer text-center appearance-none"
                       >
                         <option value="서류">서류</option>
                         <option value="면접">면접</option>
@@ -1100,22 +1128,55 @@ const ProjectDetailBoard = ({ project, onBack, onUpdateProject, onToggleStatus }
                         type="text"
                         value={row.field || ''}
                         onChange={(e) => handleMemberChange(row.id, 'field', e.target.value)}
-                        className="w-full bg-transparent border-none focus:ring-1 focus:ring-blue-200 rounded px-1 transition-shadow text-[11px] text-gray-500 text-center"
+                        className="w-full bg-transparent border-none focus:ring-1 focus:ring-blue-200 rounded px-1 transition-shadow text-[13px] text-gray-500 text-center"
                       />
                     </td>
-                    <td className="px-4 py-3 text-center whitespace-nowrap">
-                      <input 
-                        type="date"
-                        value={row.schedule || ''}
-                        onChange={(e) => handleMemberChange(row.id, 'schedule', e.target.value)}
-                        className="bg-transparent border-none text-[11px] text-gray-500 focus:outline-none text-center"
-                      />
+                    <td className="px-4 py-3 text-center whitespace-nowrap group/cell">
+                      <div className="flex items-center justify-center gap-1">
+                        <input 
+                          type="date"
+                          value={row.schedule || ''}
+                          onChange={(e) => handleMemberChange(row.id, 'schedule', e.target.value)}
+                          className="bg-transparent border-none text-[13px] text-gray-500 focus:outline-none text-center focus:bg-white focus:ring-1 focus:ring-blue-100 rounded"
+                        />
+                        {row.schedule ? (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setCopiedSchedule(row.schedule);
+                              showToast(`일정(${row.schedule})이 복사되었습니다. 다른 위원에게 붙여넣기 하세요.`);
+                            }}
+                            className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-[#3C478F] transition-all shadow-sm bg-gray-50 border border-gray-100"
+                            title="이 일정을 복사"
+                          >
+                            <Copy className="w-3.5 h-3.5" />
+                          </button>
+                        ) : (
+                          // 일정이 없어도 호버 시엔 복사 아이콘이 아주 연하게 보이게 하여 기능 존재를 알림
+                          <div className="p-1.5 opacity-0 group-hover/cell:opacity-20 cursor-default" title="일정을 입력하면 복사 버튼이 나타납니다.">
+                            <Copy className="w-3.5 h-3.5 text-gray-400" />
+                          </div>
+                        )}
+                        {copiedSchedule && copiedSchedule !== row.schedule && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleMemberChange(row.id, 'schedule', copiedSchedule);
+                              showToast(`${row.name}에게 일정(${copiedSchedule})을 적용했습니다.`);
+                            }}
+                            className="p-1.5 rounded-lg text-emerald-500 hover:text-white hover:bg-emerald-500 transition-all shadow-sm bg-emerald-50 border border-emerald-100 animate-bounce"
+                            title={`복사된 일정(${copiedSchedule}) 붙여넣기`}
+                          >
+                            <ClipboardPaste className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 py-3 text-center border-r border-gray-50">
                       <select 
                         value={row.statusSelection || '대기'}
                         onChange={(e) => handleMemberChange(row.id, 'statusSelection', e.target.value)}
-                        className={`text-[10px] font-bold px-3 py-1 rounded-full whitespace-nowrap transition-colors cursor-pointer appearance-none text-center bg-white border border-gray-100 hover:border-[#FCC243] focus:outline-none ${STATUS_COLORS[row.statusSelection || '대기']}`}
+                        className={`text-[13px] font-bold px-3 py-1 rounded-full whitespace-nowrap transition-colors cursor-pointer appearance-none text-center bg-white border border-gray-100 hover:border-[#FCC243] focus:outline-none ${STATUS_COLORS[row.statusSelection || '대기']}`}
                         style={{ width: 'fit-content', minWidth: '54px' }}
                       >
                         <option value="대기" className="bg-white text-gray-500 py-1">대기</option>
@@ -1124,23 +1185,23 @@ const ProjectDetailBoard = ({ project, onBack, onUpdateProject, onToggleStatus }
                       </select>
                     </td>
 
-                    <td className="px-4 py-3 font-black text-center text-[#111827] whitespace-nowrap">{row.name}</td>
-                    <td className="px-4 py-3 text-center text-gray-600 whitespace-nowrap text-xs">{row.birthDate}</td>
-                    <td className="px-4 py-3 text-center font-mono text-xs text-gray-600 whitespace-nowrap">{row.phone}</td>
-                    <td className="px-4 py-3 text-center text-xs text-gray-500 border-r border-gray-50 whitespace-nowrap">{row.email}</td>
+                    <td className="px-4 py-3 font-black text-center text-[#111827] whitespace-nowrap text-[13px]">{row.name}</td>
+                    <td className="px-4 py-3 text-center text-gray-600 whitespace-nowrap text-[13px]">{row.birthDate}</td>
+                    <td className="px-4 py-3 text-center font-mono text-[13px] text-gray-600 whitespace-nowrap">{row.phone}</td>
+                    <td className="px-4 py-3 text-center text-[13px] text-gray-500 border-r border-gray-50 whitespace-nowrap">{row.email}</td>
 
-                    <td className="px-4 py-3 text-center whitespace-nowrap">
-                      {hasBankInfo ? <span className="font-bold text-emerald-700 text-xs">{row.bank}</span> : <span className="text-xs text-red-400">-</span>}
+                    <td className="px-4 py-3 text-center whitespace-nowrap text-[13px]">
+                      {hasBankInfo ? <span className="font-bold text-emerald-700 text-[13px]">{row.bank}</span> : <span className="text-[13px] text-red-400">-</span>}
                     </td>
-                    <td className="px-4 py-3 text-center font-mono text-[11px] text-gray-500 whitespace-nowrap">
+                    <td className="px-4 py-3 text-center font-mono text-[13px] text-gray-500 whitespace-nowrap">
                       {hasBankInfo ? row.account : '-'}
                     </td>
-                    <td className="px-4 py-3 text-center font-mono text-xs text-gray-500 whitespace-nowrap">
+                    <td className="px-4 py-3 text-center font-mono text-[13px] text-gray-500 whitespace-nowrap">
                       {hasBankInfo ? row.residentId : '-'}
                     </td>
                     <td className="px-4 py-3 text-center">
                       {hasBankInfo ? (
-                        <span className="text-[10px] font-bold px-2 py-1 rounded-md bg-gray-100 text-gray-600 whitespace-nowrap">{row.incomeCategory}</span>
+                        <span className="text-[13px] font-bold px-2 py-1 rounded-md bg-gray-100 text-gray-600 whitespace-nowrap">{row.incomeCategory}</span>
                       ) : (
                         '-'
                       )}
