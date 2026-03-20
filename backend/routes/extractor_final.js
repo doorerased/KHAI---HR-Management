@@ -158,7 +158,8 @@ router.post('/profile', upload.single('file'), async (req, res) => {
       }
       console.log(`[Profile Extractor] Text extracted (${extractedText.length} chars)`);
     } catch (parseError) {
-      console.error(`[Profile Extractor] Parsing TIMEOUT/ERROR for ${decodedName}:`, parseError.message);
+      const errorDuration = ((Date.now() - startTime) / 1000).toFixed(2);
+      console.error(`[Profile Extractor] Parsing TIMEOUT/ERROR for ${decodedName} after ${errorDuration}s:`, parseError.message);
       // 타임아웃 발생 시 '식별불가'로 즉시 결과 반환 (무한 루프 방지)
       return res.json({
         success: true,
@@ -183,10 +184,20 @@ router.post('/profile', upload.single('file'), async (req, res) => {
       }]
     });
   } catch (error) {
-    console.error('[Profile Extractor] Unexpected Error:', error);
-    res.status(500).json({ error: '서버 내부 오류가 발생했습니다.' });
+    const totalDuration = ((Date.now() - startTime) / 1000).toFixed(2);
+    console.error(`[Profile Extractor] Unexpected Error after ${totalDuration}s:`, error);
+    if (!res.headersSent) {
+      res.status(500).json({ error: '서버 내부 오류가 발생했습니다.' });
+    }
   } finally {
-    if (filePath && fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    try {
+      if (filePath && fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+        console.log(`[Profile Extractor] Temp file deleted: ${path.basename(filePath)}`);
+      }
+    } catch (unlinkErr) {
+      console.error('[Profile Extractor] File deletion error:', unlinkErr.message);
+    }
   }
 });
 

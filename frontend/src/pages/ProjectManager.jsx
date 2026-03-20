@@ -1022,7 +1022,7 @@ const ProjectDetailBoard = ({ project, onBack, onUpdateProject, onToggleStatus }
                   </div>
                 </th>
                 <th 
-                  className="px-4 py-3 bg-white font-bold border-b border-gray-100 whitespace-nowrap min-w-[100px] text-center cursor-pointer hover:bg-gray-50 transition-colors group text-[13px]"
+                  className="px-4 py-3 bg-white font-bold border-b border-gray-100 whitespace-nowrap min-w-[130px] text-center cursor-pointer hover:bg-gray-50 transition-colors group text-[13px]"
                   onClick={() => requestSort('field')}
                 >
                   <div className="flex items-center justify-center gap-1">
@@ -1123,7 +1123,7 @@ const ProjectDetailBoard = ({ project, onBack, onUpdateProject, onToggleStatus }
                         <option value="논술">논술</option>
                       </select>
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
+                    <td className="px-4 py-3 whitespace-nowrap min-w-[130px]">
                       <input 
                         type="text"
                         value={row.field || ''}

@@ -37,7 +37,7 @@ function App() {
             </Route>
           </Routes>
           {/* Version display moved outside of Routes to ensure syntactical correctness */}
-          <span className="text-[10px] font-bold text-gray-300 tracking-wider">v1.7</span>
+          <span className="text-[10px] font-bold text-gray-300 tracking-wider">v1.9-REFRESH-1738</span>
         </Router>
       )}
     </>

@@ -198,6 +198,9 @@ const ProfileExtractor = () => {
     let errorDetails = [];
 
     for (let i = 0; i < selectedFiles.length; i++) {
+      // 대량 업로드 시 서버 부하 분산을 위해 1초 대기 (Throttle)
+      if (i > 0) await new Promise(resolve => setTimeout(resolve, 1000));
+
       const file = selectedFiles[i];
       const formData = new FormData();
       const ext = file.name.split('.').pop();
@@ -212,10 +215,14 @@ const ProfileExtractor = () => {
 
         if (!response.ok) {
           let errMessage = `HTTP ${response.status}`;
-          try {
-            const errData = await response.json();
-            if (errData && errData.error) errMessage = errData.error;
-          } catch (e) {}
+          if (response.status === 502 || response.status === 504) {
+            errMessage = "서버가 일시적으로 응답하지 않습니다. 파일이 너무 크거나 복잡할 수 있습니다. 잠시 후 다시 시도해 주세요.";
+          } else {
+            try {
+              const errData = await response.json();
+              if (errData && errData.error) errMessage = errData.error;
+            } catch (e) {}
+          }
           errorDetails.push(`[${file.name}] ${errMessage}`);
           continue;
         }
