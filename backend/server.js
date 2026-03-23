@@ -19,7 +19,7 @@ app.use((req, res, next) => {
 app.use('/api/extract', extractorRouter);
 
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', message: '평가 위원 관리 백엔드 서버 정상 작동 중' });
+  res.json({ status: 'ok', message: '평가 위원 관리 백엔드 서버 정상 작동 중', version: 'v1.9.9 (생년월일 오인식 방어 패치 완료)' });
 });
 
 const HOST = '0.0.0.0';

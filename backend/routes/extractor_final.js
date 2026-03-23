@@ -78,7 +78,18 @@ function parseProfileText(text, filename) {
 
     // 3. 생년월일 추출 (한 자리 숫자 및 다양한 구분자 :, / 대응)
     const birthRegex = /((?:19|20)\d{2})[-.\s\ub144/:]*(\d{1,2})[-.\s\uc6d4/:]*(\d{1,2})[\uc77c]?/;
-    const birthMatch = normalizedText.match(birthRegex);
+    let birthMatch = normalizedText.match(birthRegex);
+    
+    // 예외 방어: "2007. 01"과 같은 문구가 억지 매칭되어 월(0), 일(1)로 쪼개지는 버그 원천 차단
+    if (birthMatch) {
+      const gMonth = parseInt(birthMatch[2], 10);
+      const gDay = parseInt(birthMatch[3], 10);
+      if (gMonth < 1 || gMonth > 12 || gDay < 1 || gDay > 31) {
+         // 비정상적인 날짜는 오인식된 경력 연도이므로 매칭 무효화
+         birthMatch = null; 
+      }
+    }
+
     let birth = '추출불가';
     if (birthMatch) {
       const year = birthMatch[1];
