@@ -49,12 +49,15 @@ function parseProfileText(text, filename) {
     // 과도한 텍스트 길이 제한 (정규식 성능 보호 및 이벤트 루프 점유 방지)
     const safeText = text.substring(0, 50000); 
 
+    // 0. 텍스트 전처리 고도화 (유니코드 NFC 정규화 및 공백 표준화)
     let normalizedText = safeText
-      .replace(/[\r\n]+/g, ' ')
+      .normalize('NFC')                                     // Mac NFD 대응
+      .replace(/[\r\n\t\xa0\u200b]+/g, ' ')               // 특수 공백 및 줄바꿈 통합
+      .replace(/\s+/g, ' ')                                 // 연속 공백 단일화
       .replace(/\uc774\s*\ub984/g, '\uc774\ub984')
       .replace(/\uc131\s*\uba명/g, '\uc774\ub984')
       .replace(/\uc0dd\s*\ub144\s*\uc6d4\s*\uc77c/g, '\uc0dd\ub144\uc6d4\uc77c')
-      .replace(/\uc18c\s*\uc18d\s*\ubc0f\s*\uc5f0\s*\ub77d\uc12d/g, '\uc18c\uc18d\ubc0f\uc5f0\ub77d\uc12d')
+      .replace(/\uc18c\s*\uc18d\ubc0f\uc5f0\ub77d\uc12d/g, '\uc18c\uc18d\ubc0f\uc5f0\ub77d\uc12d')
       .replace(/\uc884\s*\ubb38\s*\ubd84\s*\uc57c/g, '\uc884\ubb38\ubd84\uc57c')
       .replace(/\ud559\s*\ub825/g, '\ud559\ub825');
 
@@ -63,17 +66,18 @@ function parseProfileText(text, filename) {
     const emailMatch = normalizedText.match(emailRegex);
     const email = emailMatch ? emailMatch[1].replace(/\s+/g, '') : '추출불가';
 
-    // 2. 전화번호 추출
-    const phoneRegex = /(01[016789][-\s.]?\d{3,4}[-\s.]?\d{4})/;
+    // 2. 전화번호 추출 (다양한 구분자 및 국가번호 대응)
+    const phoneRegex = /(?:(?:\+82|0)?1[016789][-\s.]?\d{3,4}[-\s.]?\d{4})/;
     const phoneMatch = normalizedText.match(phoneRegex);
     let phone = '추출불가';
     if (phoneMatch) {
-      phone = phoneMatch[1].replace(/[\s.]+/g, '-');
+      phone = phoneMatch[0].replace(/[\s.]+/g, '-');
+      if (phone.startsWith('+82')) phone = '0' + phone.substring(3); // +82 -> 0 변환
       if (!phone.includes('-')) phone = phone.replace(/(01[016789])(\d{3,4})(\d{4})/, '$1-$2-$3');
     }
 
-    // 3. 생년월일 추출
-    const birthRegex = /((?:19|20)\d{2})[-.\s\ub144]*(\d{1,2})[-.\s\uc6d4]*(\d{1,2})[\uc77c]*/;
+    // 3. 생년월일 추출 (한 자리 숫자 및 다양한 구분자 :, / 대응)
+    const birthRegex = /((?:19|20)\d{2})[-.\s\ub144/:]*(\d{1,2})[-.\s\uc6d4/:]*(\d{1,2})[\uc77c]?/;
     const birthMatch = normalizedText.match(birthRegex);
     let birth = '추출불가';
     if (birthMatch) {
