@@ -576,6 +576,24 @@ const ProjectDetailBoard = ({ project, onBack, onUpdateProject, onToggleStatus }
   // 멤버 삭제 확인 모달 상태
   const [confirmRemoveMembers, setConfirmRemoveMembers] = useState(false);
 
+  // 일정 복사 전용 상태
+  const [copiedSchedule, setCopiedSchedule] = useState(null);
+
+  const handleCopySchedule = (value) => {
+    if (!value || value === '-') {
+      showToast("복사할 일정이 없습니다.");
+      return;
+    }
+    setCopiedSchedule(value);
+    showToast(`'${value}' 일정이 복사되었습니다.`);
+  };
+
+  const handlePasteSchedule = (memberId, date) => {
+    if (!copiedSchedule) return;
+    handleScheduleChange(memberId, date, copiedSchedule);
+    showToast(`'${copiedSchedule}' 일정을 붙여넣었습니다.`);
+  };
+
   const handleAddScheduleDate = (e) => {
     const newDate = e.target.value;
     if (!newDate || !newDate.trim()) return;
@@ -1245,17 +1263,38 @@ const ProjectDetailBoard = ({ project, onBack, onUpdateProject, onToggleStatus }
                     </td>
                     {scheduleDates.length > 0 ? (
                       scheduleDates.map(date => (
-                        <td key={date} className="px-2 py-3 text-center whitespace-nowrap group/cell border-r border-gray-50/50 last:border-r-0">
-                          <select 
-                            value={row.schedules?.[date] || '-'}
-                            onChange={(e) => handleScheduleChange(row.id, date, e.target.value)}
-                            className={`bg-transparent border-none text-[13px] focus:outline-none cursor-pointer text-center appearance-none ${!row.schedules?.[date] || row.schedules?.[date] === '-' ? 'text-gray-300 font-normal' : 'text-[#3C478F] font-bold'}`}
-                          >
-                            <option value="-">-</option>
-                            <option value="종일">종일</option>
-                            <option value="오전 반일">오전 반일</option>
-                            <option value="오후 반일">오후 반일</option>
-                          </select>
+                        <td key={date} className="px-2 py-3 text-center whitespace-nowrap group/cell border-r border-gray-50/50 last:border-r-0 relative">
+                          <div className="flex items-center justify-center gap-1">
+                            <select 
+                              value={row.schedules?.[date] || '-'}
+                              onChange={(e) => handleScheduleChange(row.id, date, e.target.value)}
+                              className={`bg-transparent border-none text-[13px] focus:outline-none cursor-pointer text-center appearance-none ${!row.schedules?.[date] || row.schedules?.[date] === '-' ? 'text-gray-300 font-normal' : 'text-[#3C478F] font-bold'}`}
+                            >
+                              <option value="-">-</option>
+                              <option value="종일">종일</option>
+                              <option value="오전 반일">오전 반일</option>
+                              <option value="오후 반일">오후 반일</option>
+                            </select>
+                            
+                            <div className="flex flex-col gap-0.5 opacity-0 group-hover/cell:opacity-100 transition-opacity ml-1">
+                              <button 
+                                onClick={() => handleCopySchedule(row.schedules?.[date] || '-')}
+                                className="p-0.5 hover:bg-gray-100 rounded text-gray-400 hover:text-[#3C478F]"
+                                title="일정 복사"
+                              >
+                                <Copy className="w-3 h-3" />
+                              </button>
+                              {copiedSchedule && (
+                                <button 
+                                  onClick={() => handlePasteSchedule(row.id, date)}
+                                  className="p-0.5 hover:bg-gray-100 rounded text-gray-400 hover:text-green-600 animate-pulse"
+                                  title="복사한 일정 붙여넣기"
+                                >
+                                  <ClipboardPaste className="w-3 h-3" />
+                                </button>
+                              )}
+                            </div>
+                          </div>
                         </td>
                       ))
                     ) : (
