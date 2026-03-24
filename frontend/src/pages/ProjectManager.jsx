@@ -520,7 +520,29 @@ const STATUS_COLORS = {
 };
 
 const ProjectDetailBoard = ({ project, onBack, onUpdateProject, onToggleStatus }) => {
-  const [members, setMembers] = useState(project.members || []);
+  const [members, setMembers] = useState(() => {
+    let initialMembers = project.members || [];
+    return initialMembers.map(m => {
+      let migrated = { ...m };
+      if (m.schedule && !m.schedules) {
+        migrated.schedules = { [m.schedule]: '종일' };
+        delete migrated.schedule;
+      } else if (!m.schedules) {
+        migrated.schedules = {};
+      }
+      return migrated;
+    });
+  });
+
+  const [scheduleDates, setScheduleDates] = useState(() => {
+    let initialScheduleDates = project.scheduleDates || [];
+    let datesToMigrate = new Set(initialScheduleDates);
+    (project.members || []).forEach(m => {
+      if (m.schedule && !m.schedules) datesToMigrate.add(m.schedule);
+    });
+    return Array.from(datesToMigrate).sort();
+  });
+
   const [selectedIds, setSelectedIds] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   
@@ -541,11 +563,47 @@ const ProjectDetailBoard = ({ project, onBack, onUpdateProject, onToggleStatus }
   // 토스트 메시지 상태
   const [saveToast, setSaveToast] = useState({ show: false, message: '' });
 
-  // 일정 복사/붙여넣기 상태
-  const [copiedSchedule, setCopiedSchedule] = useState(null);
-
   // 멤버 삭제 확인 모달 상태
   const [confirmRemoveMembers, setConfirmRemoveMembers] = useState(false);
+
+  const handleAddScheduleDate = () => {
+    const newDate = window.prompt("추가할 일자(날짜)를 입력하세요 (예: 2026-03-30 또는 자유 형식)");
+    if (!newDate || !newDate.trim()) return;
+    const trimmed = newDate.trim();
+    if (scheduleDates.includes(trimmed)) {
+      showToast("이미 등록된 일정입니다.");
+      return;
+    }
+    setScheduleDates(prev => [...prev, trimmed].sort());
+    showToast(`새로운 일정(${trimmed})이 추가되었습니다.`);
+  };
+
+  const handleRemoveScheduleDate = (dateToRemove) => {
+    if (window.confirm(`${dateToRemove} 일정을 삭제하시겠습니까? (선택된 참석 정보도 함께 사라집니다)`)) {
+      setScheduleDates(prev => prev.filter(d => d !== dateToRemove));
+      setMembers(prev => prev.map(m => {
+        if (!m.schedules || !m.schedules[dateToRemove]) return m;
+        const newSchedules = { ...m.schedules };
+        delete newSchedules[dateToRemove];
+        return { ...m, schedules: newSchedules };
+      }));
+    }
+  };
+
+  const handleScheduleChange = (memberId, date, value) => {
+    setMembers(prev => prev.map(m => {
+      if (m.id === memberId) {
+        return {
+          ...m,
+          schedules: {
+            ...(m.schedules || {}),
+            [date]: value
+          }
+        };
+      }
+      return m;
+    }));
+  };
 
   // 토스트 표시 함수
   const showToast = (message) => {
@@ -580,8 +638,8 @@ const ProjectDetailBoard = ({ project, onBack, onUpdateProject, onToggleStatus }
 
   // members 상태가 변경되면 부모(대시보드)에 업데이트 이벤트를 쏴서 로컬스토리지 동기화
   useEffect(() => {
-    onUpdateProject({ ...project, members });
-  }, [members]);
+    onUpdateProject({ ...project, members, scheduleDates });
+  }, [members, scheduleDates]);
 
   // --- 인라인 수정 핸들러 ---
   const handleMemberChange = (memberId, field, value) => {
@@ -871,21 +929,32 @@ const ProjectDetailBoard = ({ project, onBack, onUpdateProject, onToggleStatus }
     if (selectedIds.length === 0) return;
     const itemsToExport = currentMembers.filter(m => selectedIds.includes(m.id));
     
-    const excelData = itemsToExport.map(row => ({
-      '기관명': row.institution,
-      '구분': row.type,
-      '분야': row.field,
-      '일정': row.schedule || '',
-      '선정여부': row.statusSelection,
-      '이름': row.name,
-      '생년월일': row.birthDate ? row.birthDate.replace(/\./g, '-') : '',
-      '연락처': row.phone,
-      '이메일': row.email,
-      '은행명': row.bank !== '정보 없음' ? row.bank : '',
-      '계좌번호': row.account !== '정보 없음' ? row.account : '',
-      '주민번호': row.residentId !== '정보 없음' ? row.residentId : '',
-      '소득구분': row.incomeCategory !== '-' ? row.incomeCategory : '',
-    }));
+    const excelData = itemsToExport.map(row => {
+      const rowData = {
+        '기관명': row.institution,
+        '구분': row.type,
+        '분야': row.field,
+      };
+
+      if (scheduleDates.length > 0) {
+        scheduleDates.forEach(date => {
+          rowData[date] = row.schedules?.[date] || '-';
+        });
+      } else {
+        rowData['일정'] = '-';
+      }
+
+      rowData['선정여부'] = row.statusSelection;
+      rowData['이름'] = row.name;
+      rowData['생년월일'] = row.birthDate ? row.birthDate.replace(/\./g, '-') : '';
+      rowData['연락처'] = row.phone;
+      rowData['이메일'] = row.email;
+      rowData['은행명'] = row.bank !== '정보 없음' ? row.bank : '';
+      rowData['계좌번호'] = row.account !== '정보 없음' ? row.account : '';
+      rowData['주민등록번호'] = row.residentId !== '정보 없음' ? row.residentId : '';
+      rowData['소득구분'] = row.incomeCategory !== '-' ? row.incomeCategory : '';
+      return rowData;
+    });
 
     const worksheet = XLSX.utils.json_to_sheet(excelData);
     const workbook = XLSX.utils.book_new();
@@ -984,7 +1053,7 @@ const ProjectDetailBoard = ({ project, onBack, onUpdateProject, onToggleStatus }
           <table className="w-full text-[13px] text-left border-collapse">
             <thead className="bg-white border-b border-gray-200 sticky top-0 z-10 shadow-sm">
               <tr className="text-[11px] text-gray-400 tracking-wider">
-                <th className="px-4 py-3 w-10 text-center bg-white sticky left-0 z-20 border-b border-gray-100">
+                <th rowSpan={scheduleDates.length > 0 ? 2 : 1} className="px-4 py-3 w-10 text-center bg-white sticky left-0 z-20 border-b border-gray-100">
                   <button onClick={toggleSelectAll} className="focus:outline-none">
                      {selectedIds.length === currentMembers.length && currentMembers.length > 0 ? (
                        <CheckSquare className="w-4 h-4 text-[#FCC243]" />
@@ -994,6 +1063,7 @@ const ProjectDetailBoard = ({ project, onBack, onUpdateProject, onToggleStatus }
                    </button>
                 </th>
                  <th 
+                  rowSpan={scheduleDates.length > 0 ? 2 : 1}
                   className="px-4 py-3 bg-white font-bold border-b border-gray-100 whitespace-nowrap min-w-[120px] text-center cursor-pointer hover:text-[#FCC243] transition-colors group"
                   onClick={handleBulkUpdateInstitution}
                   title="클릭하여 기관명 일괄 설정"
@@ -1001,6 +1071,7 @@ const ProjectDetailBoard = ({ project, onBack, onUpdateProject, onToggleStatus }
                   기관명
                 </th>
                 <th 
+                  rowSpan={scheduleDates.length > 0 ? 2 : 1}
                   className="px-4 py-3 bg-white font-bold border-b border-gray-100 whitespace-nowrap min-w-[100px] text-center cursor-pointer hover:bg-gray-50 transition-colors group text-[13px]"
                   onClick={() => requestSort('type')}
                 >
@@ -1022,6 +1093,7 @@ const ProjectDetailBoard = ({ project, onBack, onUpdateProject, onToggleStatus }
                   </div>
                 </th>
                 <th 
+                  rowSpan={scheduleDates.length > 0 ? 2 : 1}
                   className="px-4 py-3 bg-white font-bold border-b border-gray-100 whitespace-nowrap min-w-[130px] text-center cursor-pointer hover:bg-gray-50 transition-colors group text-[13px]"
                   onClick={() => requestSort('field')}
                 >
@@ -1032,43 +1104,26 @@ const ProjectDetailBoard = ({ project, onBack, onUpdateProject, onToggleStatus }
                     </span>
                   </div>
                 </th>
+
+                {scheduleDates.length > 0 ? (
+                  <th colSpan={scheduleDates.length} className="px-4 py-2 bg-white font-bold border-b border-gray-100 text-center text-[13px]">
+                    일정 <button onClick={handleAddScheduleDate} className="ml-2 px-2 py-0.5 bg-gray-100 text-gray-500 rounded-md hover:bg-[#3C478F] hover:text-white transition-colors text-[10px] font-bold">+ 일정 추가</button>
+                  </th>
+                ) : (
+                  <th 
+                    className="px-4 py-3 bg-white font-bold border-b border-gray-100 whitespace-nowrap text-center min-w-[160px] cursor-pointer hover:bg-gray-50 transition-colors group text-[13px]"
+                    onClick={handleAddScheduleDate}
+                  >
+                    <div className="flex items-center justify-center gap-1.5">
+                      <Calendar className="w-3.5 h-3.5 text-gray-400" />
+                      일정
+                      <button className="ml-1 px-1.5 py-0.5 bg-gray-100 text-[#3C478F] font-bold rounded hover:bg-[#3C478F] hover:text-white transition-colors text-[10px]">+ 추가</button>
+                    </div>
+                  </th>
+                )}
+
                 <th 
-                  className="px-4 py-3 bg-white font-bold border-b border-gray-100 whitespace-nowrap text-center min-w-[160px] cursor-pointer hover:bg-gray-50 transition-colors group text-[13px]"
-                  onClick={() => {
-                    if (copiedSchedule) {
-                      if (selectedIds.length > 0) {
-                        setMembers(prev => prev.map(m => selectedIds.includes(m.id) ? { ...m, schedule: copiedSchedule } : m));
-                        showToast(`${selectedIds.length}명에게 일정(${copiedSchedule})을 일괄 적용했습니다.`);
-                      } else {
-                        if (window.confirm(`전체 위원에게 일정(${copiedSchedule})을 적용하시겠습니까?`)) {
-                          setMembers(prev => prev.map(m => ({ ...m, schedule: copiedSchedule })));
-                          showToast(`전체 위원에게 일정(${copiedSchedule})을 일괄 적용했습니다.`);
-                        }
-                      }
-                    } else {
-                      requestSort('schedule');
-                    }
-                  }}
-                  title={copiedSchedule ? `클릭하여 ${selectedIds.length > 0 ? '선택된 위원' : '전체 위원'}에게 복사된 일정(${copiedSchedule}) 일괄 적용` : '클릭하여 정렬'}
-                >
-                  <div className="flex items-center justify-center gap-1.5">
-                    {copiedSchedule ? (
-                      <div className="flex items-center gap-1.5 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100 shadow-sm animate-pulse">
-                        <ClipboardPaste className="w-3.5 h-3.5 text-[#3C478F]" />
-                        <span className="text-[#3C478F] font-black text-[13px]">일정 붙여넣기</span>
-                      </div>
-                    ) : (
-                      <>
-                        <Calendar className="w-3.5 h-3.5 text-gray-400" />
-                        일정
-                        <span className={`transition-opacity ${sortConfig.key === 'schedule' ? 'opacity-100' : 'opacity-0 group-hover:opacity-30'}`}>
-                          {sortConfig.key === 'schedule' && sortConfig.direction === 'asc' ? '▲' : '▼'}
-                        </span>
-                      </>
-                    )}
-                  </div>
-                </th>
-                <th 
+                  rowSpan={scheduleDates.length > 0 ? 2 : 1}
                   className="px-4 py-3 bg-white font-bold border-b border-gray-100 border-r whitespace-nowrap text-center min-w-[100px] cursor-pointer hover:bg-gray-50 transition-colors group text-[13px]"
                   onClick={() => requestSort('statusSelection')}
                 >
@@ -1080,16 +1135,32 @@ const ProjectDetailBoard = ({ project, onBack, onUpdateProject, onToggleStatus }
                   </div>
                 </th>
 
-                <th className="px-4 py-3 bg-white font-bold border-b border-gray-100 whitespace-nowrap text-center text-[13px]">이름</th>
-                <th className="px-4 py-3 bg-white font-bold border-b border-gray-100 whitespace-nowrap text-center text-[13px]">생년월일</th>
-                <th className="px-4 py-3 bg-white font-bold border-b border-gray-100 whitespace-nowrap text-center text-[13px]">연락처</th>
-                <th className="px-4 py-3 bg-white font-bold border-b border-gray-100 border-r whitespace-nowrap text-center text-[13px]">이메일</th>
+                <th rowSpan={scheduleDates.length > 0 ? 2 : 1} className="px-4 py-3 bg-white font-bold border-b border-gray-100 whitespace-nowrap text-center text-[13px]">이름</th>
+                <th rowSpan={scheduleDates.length > 0 ? 2 : 1} className="px-4 py-3 bg-white font-bold border-b border-gray-100 whitespace-nowrap text-center text-[13px]">생년월일</th>
+                <th rowSpan={scheduleDates.length > 0 ? 2 : 1} className="px-4 py-3 bg-white font-bold border-b border-gray-100 whitespace-nowrap text-center text-[13px]">연락처</th>
+                <th rowSpan={scheduleDates.length > 0 ? 2 : 1} className="px-4 py-3 bg-white font-bold border-b border-gray-100 border-r whitespace-nowrap text-center text-[13px]">이메일</th>
 
-                <th className="px-4 py-3 bg-white font-bold border-b border-gray-100 whitespace-nowrap text-center text-[13px]">은행명</th>
-                <th className="px-4 py-3 bg-white font-bold border-b border-gray-100 whitespace-nowrap text-center text-[13px]">계좌번호</th>
-                <th className="px-4 py-3 bg-white font-bold border-b border-gray-100 whitespace-nowrap text-center text-[13px]">주민등록번호</th>
-                <th className="px-4 py-3 bg-white font-bold border-b border-gray-100 whitespace-nowrap text-center text-[13px]">소득구분</th>
+                <th rowSpan={scheduleDates.length > 0 ? 2 : 1} className="px-4 py-3 bg-white font-bold border-b border-gray-100 whitespace-nowrap text-center text-[13px]">은행명</th>
+                <th rowSpan={scheduleDates.length > 0 ? 2 : 1} className="px-4 py-3 bg-white font-bold border-b border-gray-100 whitespace-nowrap text-center text-[13px]">계좌번호</th>
+                <th rowSpan={scheduleDates.length > 0 ? 2 : 1} className="px-4 py-3 bg-white font-bold border-b border-gray-100 whitespace-nowrap text-center text-[13px]">주민등록번호</th>
+                <th rowSpan={scheduleDates.length > 0 ? 2 : 1} className="px-4 py-3 bg-white font-bold border-b border-gray-100 whitespace-nowrap text-center text-[13px]">소득구분</th>
               </tr>
+              {scheduleDates.length > 0 && (
+                <tr className="text-[11px] text-gray-400 tracking-wider">
+                  {scheduleDates.map(date => (
+                    <th key={date} className="px-2 py-1.5 bg-[#F8F9FB] font-bold border-b border-gray-100 whitespace-nowrap text-center text-[12px] group relative min-w-[100px] !z-0">
+                      {date}
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); handleRemoveScheduleDate(date); }}
+                        className="absolute right-1 top-1/2 -translate-y-1/2 text-red-300 hover:text-red-600 opacity-0 group-hover:opacity-100 rounded-full hover:bg-red-50 p-1 transition-all"
+                        title="날짜 삭제"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </th>
+                  ))}
+                </tr>
+              )}
             </thead>
             <tbody className="bg-white">
               {currentMembers.map((row) => {
@@ -1131,47 +1202,24 @@ const ProjectDetailBoard = ({ project, onBack, onUpdateProject, onToggleStatus }
                         className="w-full bg-transparent border-none focus:ring-1 focus:ring-blue-200 rounded px-1 transition-shadow text-[13px] text-gray-500 text-center"
                       />
                     </td>
-                    <td className="px-4 py-3 text-center whitespace-nowrap group/cell">
-                      <div className="flex items-center justify-center gap-1">
-                        <input 
-                          type="date"
-                          value={row.schedule || ''}
-                          onChange={(e) => handleMemberChange(row.id, 'schedule', e.target.value)}
-                          className="bg-transparent border-none text-[13px] text-gray-500 focus:outline-none text-center focus:bg-white focus:ring-1 focus:ring-blue-100 rounded"
-                        />
-                        {row.schedule ? (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setCopiedSchedule(row.schedule);
-                              showToast(`일정(${row.schedule})이 복사되었습니다. 다른 위원에게 붙여넣기 하세요.`);
-                            }}
-                            className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-[#3C478F] transition-all shadow-sm bg-gray-50 border border-gray-100"
-                            title="이 일정을 복사"
+                    {scheduleDates.length > 0 ? (
+                      scheduleDates.map(date => (
+                        <td key={date} className="px-2 py-3 text-center whitespace-nowrap group/cell border-r border-gray-50/50 last:border-r-0">
+                          <select 
+                            value={row.schedules?.[date] || '-'}
+                            onChange={(e) => handleScheduleChange(row.id, date, e.target.value)}
+                            className={`bg-transparent border-none text-[13px] focus:outline-none cursor-pointer text-center appearance-none ${!row.schedules?.[date] || row.schedules?.[date] === '-' ? 'text-gray-300 font-normal' : 'text-[#3C478F] font-bold'}`}
                           >
-                            <Copy className="w-3.5 h-3.5" />
-                          </button>
-                        ) : (
-                          // 일정이 없어도 호버 시엔 복사 아이콘이 아주 연하게 보이게 하여 기능 존재를 알림
-                          <div className="p-1.5 opacity-0 group-hover/cell:opacity-20 cursor-default" title="일정을 입력하면 복사 버튼이 나타납니다.">
-                            <Copy className="w-3.5 h-3.5 text-gray-400" />
-                          </div>
-                        )}
-                        {copiedSchedule && copiedSchedule !== row.schedule && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleMemberChange(row.id, 'schedule', copiedSchedule);
-                              showToast(`${row.name}에게 일정(${copiedSchedule})을 적용했습니다.`);
-                            }}
-                            className="p-1.5 rounded-lg text-emerald-500 hover:text-white hover:bg-emerald-500 transition-all shadow-sm bg-emerald-50 border border-emerald-100 animate-bounce"
-                            title={`복사된 일정(${copiedSchedule}) 붙여넣기`}
-                          >
-                            <ClipboardPaste className="w-3.5 h-3.5" />
-                          </button>
-                        )}
-                      </div>
-                    </td>
+                            <option value="-">-</option>
+                            <option value="종일">종일</option>
+                            <option value="오전 반일">오전 반일</option>
+                            <option value="오후 반일">오후 반일</option>
+                          </select>
+                        </td>
+                      ))
+                    ) : (
+                      <td className="px-4 py-3 text-center text-gray-300 text-xs">-</td>
+                    )}
                     <td className="px-4 py-3 text-center border-r border-gray-50">
                       <select 
                         value={row.statusSelection || '대기'}
