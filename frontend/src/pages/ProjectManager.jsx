@@ -519,6 +519,16 @@ const STATUS_COLORS = {
   '미완료': 'bg-yellow-100 text-yellow-700',
 };
 
+const formatDateWithDay = (dateStr) => {
+  if (!dateStr || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr;
+  const days = ['일', '월', '화', '수', '목', '금', '토'];
+  const date = new Date(dateStr);
+  if (isNaN(date)) return dateStr;
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${month}.${day}. (${days[date.getDay()]})`;
+};
+
 const ProjectDetailBoard = ({ project, onBack, onUpdateProject, onToggleStatus }) => {
   const [members, setMembers] = useState(() => {
     let initialMembers = project.members || [];
@@ -566,16 +576,18 @@ const ProjectDetailBoard = ({ project, onBack, onUpdateProject, onToggleStatus }
   // 멤버 삭제 확인 모달 상태
   const [confirmRemoveMembers, setConfirmRemoveMembers] = useState(false);
 
-  const handleAddScheduleDate = () => {
-    const newDate = window.prompt("추가할 일자(날짜)를 입력하세요 (예: 2026-03-30 또는 자유 형식)");
+  const handleAddScheduleDate = (e) => {
+    const newDate = e.target.value;
     if (!newDate || !newDate.trim()) return;
     const trimmed = newDate.trim();
     if (scheduleDates.includes(trimmed)) {
       showToast("이미 등록된 일정입니다.");
+      e.target.value = '';
       return;
     }
     setScheduleDates(prev => [...prev, trimmed].sort());
-    showToast(`새로운 일정(${trimmed})이 추가되었습니다.`);
+    showToast(`새로운 일정(${formatDateWithDay(trimmed)})이 추가되었습니다.`);
+    e.target.value = '';
   };
 
   const handleRemoveScheduleDate = (dateToRemove) => {
@@ -1107,17 +1119,35 @@ const ProjectDetailBoard = ({ project, onBack, onUpdateProject, onToggleStatus }
 
                 {scheduleDates.length > 0 ? (
                   <th colSpan={scheduleDates.length} className="px-4 py-2 bg-white font-bold border-b border-gray-100 text-center text-[13px]">
-                    일정 <button onClick={handleAddScheduleDate} className="ml-2 px-2 py-0.5 bg-gray-100 text-gray-500 rounded-md hover:bg-[#3C478F] hover:text-white transition-colors text-[10px] font-bold">+ 일정 추가</button>
+                    일정 
+                    <div className="relative inline-flex align-middle ml-2">
+                       <input 
+                         type="date"
+                         onChange={handleAddScheduleDate}
+                         className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                         title="달력을 열어 일정 추가"
+                       />
+                       <button className="px-2 py-0.5 bg-gray-100 text-gray-500 rounded-md hover:bg-[#3C478F] hover:text-white transition-colors text-[10px] font-bold pointer-events-none">
+                         + 추가
+                       </button>
+                    </div>
                   </th>
                 ) : (
                   <th 
-                    className="px-4 py-3 bg-white font-bold border-b border-gray-100 whitespace-nowrap text-center min-w-[160px] cursor-pointer hover:bg-gray-50 transition-colors group text-[13px]"
-                    onClick={handleAddScheduleDate}
+                    className="relative px-4 py-3 bg-white font-bold border-b border-gray-100 whitespace-nowrap text-center min-w-[160px] hover:bg-gray-50 transition-colors group text-[13px]"
                   >
-                    <div className="flex items-center justify-center gap-1.5">
+                    <input 
+                      type="date"
+                      onChange={handleAddScheduleDate}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                      title="달력을 열어 일정 추가"
+                    />
+                    <div className="flex items-center justify-center gap-1.5 pointer-events-none">
                       <Calendar className="w-3.5 h-3.5 text-gray-400" />
                       일정
-                      <button className="ml-1 px-1.5 py-0.5 bg-gray-100 text-[#3C478F] font-bold rounded hover:bg-[#3C478F] hover:text-white transition-colors text-[10px]">+ 추가</button>
+                      <button className="ml-1 px-1.5 py-0.5 bg-gray-100 text-[#3C478F] font-bold rounded hover:bg-[#3C478F] hover:text-white transition-colors text-[10px] pointer-events-none">
+                        + 추가
+                      </button>
                     </div>
                   </th>
                 )}
@@ -1148,11 +1178,11 @@ const ProjectDetailBoard = ({ project, onBack, onUpdateProject, onToggleStatus }
               {scheduleDates.length > 0 && (
                 <tr className="text-[11px] text-gray-400 tracking-wider">
                   {scheduleDates.map(date => (
-                    <th key={date} className="px-2 py-1.5 bg-[#F8F9FB] font-bold border-b border-gray-100 whitespace-nowrap text-center text-[12px] group relative min-w-[100px] !z-0">
-                      {date}
+                    <th key={date} className="px-2 py-1.5 bg-[#F8F9FB] font-bold border-b border-gray-100 whitespace-nowrap text-center text-[12px] group relative min-w-[100px] z-0!">
+                      {formatDateWithDay(date)}
                       <button 
                         onClick={(e) => { e.stopPropagation(); handleRemoveScheduleDate(date); }}
-                        className="absolute right-1 top-1/2 -translate-y-1/2 text-red-300 hover:text-red-600 opacity-0 group-hover:opacity-100 rounded-full hover:bg-red-50 p-1 transition-all"
+                        className="absolute right-1 top-1/2 -translate-y-1/2 text-red-300 hover:text-red-600 opacity-0 group-hover:opacity-100 rounded-full hover:bg-red-50 p-1 transition-all z-10"
                         title="날짜 삭제"
                       >
                         <X className="w-3.5 h-3.5" />
