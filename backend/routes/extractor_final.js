@@ -95,7 +95,7 @@ function parseProfileText(text, filename) {
       const year = birthMatch[1];
       const month = birthMatch[2].padStart(2, '0');
       const day = birthMatch[3].padStart(2, '0');
-      birth = `${year}.${month}.${day}`;
+      birth = `${year}-${month}-${day}`;
     }
 
     let name = '';
