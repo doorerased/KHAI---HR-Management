@@ -950,7 +950,7 @@ const ProjectDetailBoard = ({ project, onBack, onUpdateProject, onToggleStatus }
 
       if (scheduleDates.length > 0) {
         scheduleDates.forEach(date => {
-          rowData[date] = row.schedules?.[date] || '-';
+          rowData[formatDateWithDay(date)] = row.schedules?.[date] || '-';
         });
       } else {
         rowData['일정'] = '-';
@@ -1121,33 +1121,44 @@ const ProjectDetailBoard = ({ project, onBack, onUpdateProject, onToggleStatus }
                   <th colSpan={scheduleDates.length} className="px-4 py-2 bg-white font-bold border-b border-gray-100 text-center text-[13px]">
                     일정 
                     <div className="relative inline-flex align-middle ml-2">
+                       <button 
+                         onClick={(e) => {
+                           try { e.currentTarget.nextElementSibling.showPicker(); } 
+                           catch (err) { e.currentTarget.nextElementSibling.focus(); }
+                         }}
+                         className="px-2 py-0.5 bg-gray-100 text-gray-500 rounded-md hover:bg-[#3C478F] hover:text-white transition-colors text-[10px] font-bold relative z-10"
+                       >
+                         + 추가
+                       </button>
                        <input 
                          type="date"
                          onChange={handleAddScheduleDate}
-                         className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                         className="absolute bottom-0 right-0 w-full h-full opacity-0 pointer-events-none -z-10"
                          title="달력을 열어 일정 추가"
                        />
-                       <button className="px-2 py-0.5 bg-gray-100 text-gray-500 rounded-md hover:bg-[#3C478F] hover:text-white transition-colors text-[10px] font-bold pointer-events-none">
-                         + 추가
-                       </button>
                     </div>
                   </th>
                 ) : (
                   <th 
-                    className="relative px-4 py-3 bg-white font-bold border-b border-gray-100 whitespace-nowrap text-center min-w-[160px] hover:bg-gray-50 transition-colors group text-[13px]"
+                    className="px-4 py-3 bg-white font-bold border-b border-gray-100 whitespace-nowrap text-center min-w-[160px] hover:bg-gray-50 transition-colors group text-[13px]"
                   >
-                    <input 
-                      type="date"
-                      onChange={handleAddScheduleDate}
-                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                      title="달력을 열어 일정 추가"
-                    />
-                    <div className="flex items-center justify-center gap-1.5 pointer-events-none">
+                    <div className="flex items-center justify-center gap-1.5 relative">
                       <Calendar className="w-3.5 h-3.5 text-gray-400" />
                       일정
-                      <button className="ml-1 px-1.5 py-0.5 bg-gray-100 text-[#3C478F] font-bold rounded hover:bg-[#3C478F] hover:text-white transition-colors text-[10px] pointer-events-none">
+                      <button 
+                        onClick={(e) => {
+                          try { e.currentTarget.nextElementSibling.showPicker(); } 
+                          catch (err) { e.currentTarget.nextElementSibling.focus(); }
+                        }}
+                        className="ml-1 px-1.5 py-0.5 bg-gray-100 text-[#3C478F] font-bold rounded hover:bg-[#3C478F] hover:text-white transition-colors text-[10px] relative z-10"
+                      >
                         + 추가
                       </button>
+                      <input 
+                        type="date"
+                        onChange={handleAddScheduleDate}
+                        className="absolute bottom-0 right-0 w-full h-full opacity-0 pointer-events-none -z-10"
+                      />
                     </div>
                   </th>
                 )}
