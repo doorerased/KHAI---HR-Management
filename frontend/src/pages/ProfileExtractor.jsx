@@ -252,7 +252,7 @@ const ProfileExtractor = () => {
     if (!dataToExport || dataToExport.length === 0) return;
     const excelData = dataToExport.map(row => ({
       '이름': row.name,
-      '생년월일': row.birth,
+      '생년월일': row.birth ? row.birth.replace(/\./g, '-') : '',
       '연락처': row.phone,
       '이메일': row.email
     }));
@@ -553,7 +553,7 @@ const ProfileExtractor = () => {
                           {extractedData.map((row, idx) => (
                             <tr key={idx} className="border-b border-gray-50 hover:bg-[#FAFAFA] transition-colors">
                               <td className="px-8 py-3 font-black text-[#111827] text-[13px]">{row.name}</td>
-                              <td className="px-8 py-3 font-mono text-gray-600 text-[13px]">{row.birth}</td>
+                              <td className="px-8 py-3 font-mono text-gray-600 text-[13px]">{row.birth ? row.birth.replace(/\./g, '-') : ''}</td>
                               <td className="px-8 py-3 font-mono text-gray-600 text-[13px]">{row.phone}</td>
                               <td className="px-8 py-3 text-[#3C478F] text-[13px]">{row.email}</td>
                             </tr>
@@ -665,7 +665,7 @@ const ProfileExtractor = () => {
                           <td className="px-4 py-2 text-center">
                             <input
                               type="text"
-                              value={row.birth}
+                              value={row.birth ? row.birth.replace(/\./g, '-') : ''}
                               onChange={(e) => handleEditCell(row.archiveId, 'birth', e.target.value)}
                               className="w-full px-3 py-2 bg-transparent border-none focus:bg-white focus:ring-2 focus:ring-[#3C478F]/20 rounded-lg font-mono text-gray-600 text-center text-[13px] transition-all outline-none"
                             />

@@ -878,7 +878,7 @@ const ProjectDetailBoard = ({ project, onBack, onUpdateProject, onToggleStatus }
       '일정': row.schedule || '',
       '선정여부': row.statusSelection,
       '이름': row.name,
-      '생년월일': row.birthDate,
+      '생년월일': row.birthDate ? row.birthDate.replace(/\./g, '-') : '',
       '연락처': row.phone,
       '이메일': row.email,
       '은행명': row.bank !== '정보 없음' ? row.bank : '',
@@ -1186,7 +1186,7 @@ const ProjectDetailBoard = ({ project, onBack, onUpdateProject, onToggleStatus }
                     </td>
 
                     <td className="px-4 py-3 font-black text-center text-[#111827] whitespace-nowrap text-[13px]">{row.name}</td>
-                    <td className="px-4 py-3 text-center text-gray-600 whitespace-nowrap text-[13px]">{row.birthDate}</td>
+                    <td className="px-4 py-3 text-center text-gray-600 whitespace-nowrap text-[13px]">{row.birthDate ? row.birthDate.replace(/\./g, '-') : ''}</td>
                     <td className="px-4 py-3 text-center font-mono text-[13px] text-gray-600 whitespace-nowrap">{row.phone}</td>
                     <td className="px-4 py-3 text-center text-[13px] text-gray-500 border-r border-gray-50 whitespace-nowrap">{row.email}</td>
 
