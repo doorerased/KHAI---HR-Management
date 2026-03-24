@@ -66,7 +66,7 @@ const Layout = () => {
               <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse shadow-[0_0_6px_rgba(74,222,128,0.4)]" />
               <span className="text-[11px] font-bold text-gray-400">System Online</span>
             </div>
-            <span className="text-[10px] font-bold text-gray-300 tracking-wider">v1.7</span>
+            <span className="text-[10px] font-bold text-gray-300 tracking-wider">v1.8</span>
           </div>
         </div>
       </aside>
