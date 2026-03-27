@@ -146,36 +146,44 @@ function parseProfileText(text, filename) {
 router.post('/profile', upload.single('file'), async (req, res) => {
   const startTime = Date.now();
   let filePath = '';
+  let decodedName = '알 수 없는 파일';
+  
   try {
     if (!req.file) return res.status(400).json({ error: '업로드된 파일이 없습니다.' });
 
-    const decodedName = req.body.realFilename || req.file.originalname;
+    decodedName = req.body.realFilename || req.file.originalname;
     filePath = req.file.path;
     const mimeType = req.file.mimetype;
     let extractedText = '';
 
-    console.log(`[Profile Extractor] START: ${decodedName} (${mimeType})`);
+    console.log(`[Profile Extractor] [START] File: ${decodedName} | Path: ${path.basename(filePath)} | Type: ${mimeType}`);
 
     try {
       const lowerPath = filePath.toLowerCase();
+      const ext = path.extname(decodedName).toLowerCase();
+      
       // 1분(60초) 타임아웃 적용
       if (mimeType.startsWith('image/')) {
-        console.log('Running Tesseract OCR...');
+        console.log(`[Profile Extractor] [ACTION] Running Tesseract OCR for ${decodedName}...`);
         const ret = await withTimeout(Tesseract.recognize(filePath, 'kor+eng'), 60000, 'OCR 분석');
         extractedText = ret.data.text;
-      } else if (lowerPath.endsWith('.pptx') || lowerPath.endsWith('.docx') || lowerPath.endsWith('.xlsx') || mimeType.includes('presentation')) {
-        console.log('Running officeParser...');
+        console.log(`[Profile Extractor] [STEP DONE] OCR completed (${extractedText.length} chars)`);
+      } else if (ext === '.pptx' || ext === '.docx' || ext === '.xlsx' || lowerPath.endsWith('.pptx') || lowerPath.endsWith('.docx') || lowerPath.endsWith('.xlsx')) {
+        console.log(`[Profile Extractor] [ACTION] Running officeParser for ${decodedName}...`);
+        // officeParser는 가끔 대용량 파일에서 멈출 수 있으므로 타임아웃 래퍼가 필수적임
         const rawData = await withTimeout(officeParser.parseOffice(filePath), 60000, '오피스 파일 분석');
         extractedText = typeof rawData === 'string' ? rawData : (rawData?.toText ? rawData.toText() : JSON.stringify(rawData));
+        console.log(`[Profile Extractor] [STEP DONE] officeParser completed (${extractedText.length} chars)`);
       } else {
-        console.log('Running anyText...');
+        console.log(`[Profile Extractor] [ACTION] Running anyText for ${decodedName}...`);
         extractedText = await withTimeout(anyText.getText(filePath), 60000, '텍스트 추출');
+        console.log(`[Profile Extractor] [STEP DONE] anyText completed (${extractedText.length} chars)`);
       }
-      console.log(`[Profile Extractor] Text extracted (${extractedText.length} chars)`);
     } catch (parseError) {
       const errorDuration = ((Date.now() - startTime) / 1000).toFixed(2);
-      console.error(`[Profile Extractor] Parsing TIMEOUT/ERROR for ${decodedName} after ${errorDuration}s:`, parseError.message);
-      // 타임아웃 발생 시 '식별불가'로 즉시 결과 반환 (무한 루프 방지)
+      console.error(`[Profile Extractor] [FAILURE] Analysis TIMEOUT/ERROR for ${decodedName} after ${errorDuration}s:`, parseError.message);
+      
+      // 타임아웃/오류 시에도 사용자 인접 편의를 위해 '식별불가' 객체 반환 (500 에러로 인한 전체 중단 방지)
       return res.json({
         success: true,
         message: `파일 분석 중 시간이 초과되었거나 오류가 발생했습니다: ${parseError.message}`,
@@ -183,9 +191,10 @@ router.post('/profile', upload.single('file'), async (req, res) => {
       });
     }
 
+    console.log(`[Profile Extractor] [PROGRESS] Starting regex parsing for ${decodedName}...`);
     const parsedData = parseProfileText(extractedText, decodedName);
     const duration = ((Date.now() - startTime) / 1000).toFixed(2);
-    console.log(`[Profile Extractor] DONE in ${duration}s: ${parsedData.name}`);
+    console.log(`[Profile Extractor] [SUCCESS] ${decodedName} processed in ${duration}s. Result: ${parsedData.name}`);
     
     res.json({
       success: true,
@@ -200,18 +209,18 @@ router.post('/profile', upload.single('file'), async (req, res) => {
     });
   } catch (error) {
     const totalDuration = ((Date.now() - startTime) / 1000).toFixed(2);
-    console.error(`[Profile Extractor] Unexpected Error after ${totalDuration}s:`, error);
+    console.error(`[Profile Extractor] [CRITICAL] Unexpected Global Error for ${decodedName} after ${totalDuration}s:`, error);
     if (!res.headersSent) {
-      res.status(500).json({ error: '서버 내부 오류가 발생했습니다.' });
+      res.status(500).json({ error: '서버 내부 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.' });
     }
   } finally {
     try {
       if (filePath && fs.existsSync(filePath)) {
         fs.unlinkSync(filePath);
-        console.log(`[Profile Extractor] Temp file deleted: ${path.basename(filePath)}`);
+        console.log(`[Profile Extractor] [CLEANUP] Temp file deleted: ${path.basename(filePath)}`);
       }
     } catch (unlinkErr) {
-      console.error('[Profile Extractor] File deletion error:', unlinkErr.message);
+      console.error('[Profile Extractor] [CLEANUP ERROR] File deletion failed:', unlinkErr.message);
     }
   }
 });

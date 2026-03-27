@@ -1,5 +1,7 @@
 const express = require('express');
 const cors = require('cors');
+const fs = require('fs');
+const path = require('path');
 const extractorRouter = require('./routes/extractor_final');
 
 const app = express();
@@ -38,9 +40,21 @@ app.use((err, req, res, next) => {
 });
 
 // 강제 무응답 종료를 잡기 위한 프로세스 레벨 핸들러
+const logStream = fs.createWriteStream(path.join(__dirname, 'server.log'), { flags: 'a' });
+
+const logCriticalError = (type, err) => {
+  const timestamp = new Date().toISOString();
+  const errMsg = `[${timestamp}] [CRITICAL ${type}] ${err.stack || err}\n`;
+  console.error(errMsg);
+  logStream.write(errMsg);
+};
+
 process.on('uncaughtException', (err) => {
-  console.error('[CRITICAL] Uncaught Exception:', err);
+  logCriticalError('Uncaught Exception', err);
+  // 치명적 오류 발생 시 프로세스를 재시작할 수 있도록 1초 후 종료 (배치 파일의 루프가 재시작 시킴)
+  setTimeout(() => process.exit(1), 1000);
 });
+
 process.on('unhandledRejection', (reason, promise) => {
-  console.error('[CRITICAL] Unhandled Rejection at:', promise, 'reason:', reason);
+  logCriticalError('Unhandled Rejection', reason);
 });

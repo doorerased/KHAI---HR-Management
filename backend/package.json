@@ -16,7 +16,7 @@
     "any-text": "^1.2.0",
     "cors": "^2.8.6",
     "express": "^5.2.1",
-    "multer": "^2.1.1",
+    "multer": "1.4.5-lts.2",
     "officeparser": "^6.0.4",
     "pptxgenjs": "^4.0.1",
     "tesseract.js": "^7.0.0"
