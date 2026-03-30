@@ -43,6 +43,32 @@ try {
     'C:\\inetpub\\wwwroot\\im\\backend\\server.js'
   );
 
+  console.log('Uploading watchdog and launcher...');
+  uploadFileChunked(
+    path.join(__dirname, 'backend', 'watchdog.bat'),
+    'C:\\inetpub\\wwwroot\\im\\backend\\watchdog.bat'
+  );
+
+  uploadFileChunked(
+    path.join(__dirname, 'backend', 'launcher.bat'),
+    'C:\\inetpub\\wwwroot\\im\\backend\\launcher.bat'
+  );
+
+  uploadFileChunked(
+    path.join(__dirname, 'backend', 'start_server.bat'),
+    'C:\\inetpub\\wwwroot\\im\\backend\\start_server.bat'
+  );
+
+  // 워치독 스케줄러 등록 (5분마다 Node.js 생존 확인)
+  console.log('Setting up watchdog scheduler (every 5 min)...');
+  try { runPlink('schtasks /delete /tn KHAI_Watchdog /f'); } catch(e) {}
+  runPlink('schtasks /create /tn KHAI_Watchdog /tr C:\\inetpub\\wwwroot\\im\\backend\\watchdog.bat /sc minute /mo 5 /ru SYSTEM /rl highest /f');
+
+  // KHAI_Backend를 onstart로 재등록
+  console.log('Ensuring KHAI_Backend runs on startup...');
+  try { runPlink('schtasks /delete /tn KHAI_Backend /f'); } catch(e) {}
+  runPlink('schtasks /create /tn KHAI_Backend /tr C:\\inetpub\\wwwroot\\im\\backend\\start_server.bat /sc onstart /ru SYSTEM /rl highest /f');
+
   console.log('Restarting node process via Task Scheduler...');
   runPlink('taskkill /f /im node.exe && schtasks /run /tn KHAI_Backend');
   console.log('Restart triggered successfully!');

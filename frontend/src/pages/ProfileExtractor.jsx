@@ -187,6 +187,27 @@ const ProfileExtractor = () => {
     }
   };
 
+  const fetchWithRetry = async (url, options, retries = 1) => {
+    for (let i = 0; i <= retries; i++) {
+      try {
+        const response = await fetch(url, options);
+        if ((response.status === 502 || response.status === 504) && i < retries) {
+          console.log(`[재시도 ${i + 1}/${retries}] 서버 일시 오류, 3초 후 재시도...`);
+          await new Promise(r => setTimeout(r, 3000));
+          continue;
+        }
+        return response;
+      } catch (err) {
+        if (i < retries) {
+          console.log(`[재시도 ${i + 1}/${retries}] 네트워크 오류, 3초 후 재시도...`);
+          await new Promise(r => setTimeout(r, 3000));
+          continue;
+        }
+        throw err;
+      }
+    }
+  };
+
   const handleFileUpload = async (selectedFiles) => {
     setFiles(selectedFiles);
     setStatus('analyzing');
@@ -208,7 +229,7 @@ const ProfileExtractor = () => {
       formData.append('realFilename', file.name);
 
       try {
-        const response = await fetch('/api/extract/profile', {
+        const response = await fetchWithRetry('/api/extract/profile', {
           method: 'POST',
           body: formData,
         });

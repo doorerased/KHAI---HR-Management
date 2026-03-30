@@ -1,10 +1,25 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Outlet, NavLink, useLocation } from 'react-router-dom';
 import { FileSearch, MessageSquareText, WalletCards, BriefcaseBusiness, HelpCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const Layout = () => {
   const location = useLocation();
+  const [serverOnline, setServerOnline] = useState(true);
+
+  useEffect(() => {
+    const checkHealth = async () => {
+      try {
+        const res = await fetch('/api/health', { signal: AbortSignal.timeout(5000) });
+        setServerOnline(res.ok);
+      } catch {
+        setServerOnline(false);
+      }
+    };
+    checkHealth();
+    const interval = setInterval(checkHealth, 30000);
+    return () => clearInterval(interval);
+  }, []);
   const navItems = [
     { path: '/guide', label: '안내 가이드', icon: <HelpCircle className="w-5 h-5" /> },
     { path: '/project', label: '프로젝트 관리', icon: <BriefcaseBusiness className="w-5 h-5" /> },
@@ -63,8 +78,8 @@ const Layout = () => {
           <div className="h-px bg-linear-to-r from-transparent via-gray-300/60 to-transparent mb-5" />
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse shadow-[0_0_6px_rgba(74,222,128,0.4)]" />
-              <span className="text-[11px] font-bold text-gray-400">System Online</span>
+              <div className={`w-2 h-2 rounded-full ${serverOnline ? 'bg-green-400 animate-pulse shadow-[0_0_6px_rgba(74,222,128,0.4)]' : 'bg-red-400 animate-pulse shadow-[0_0_6px_rgba(248,113,113,0.4)]'}`} />
+              <span className={`text-[11px] font-bold ${serverOnline ? 'text-gray-400' : 'text-red-400'}`}>{serverOnline ? 'System Online' : 'System Offline'}</span>
             </div>
             <span className="text-[10px] font-bold text-gray-300 tracking-wider">v1.9.2</span>
           </div>

@@ -149,6 +149,27 @@ const BankExtractor = () => {
     }
   };
 
+  const fetchWithRetry = async (url, options, retries = 1) => {
+    for (let i = 0; i <= retries; i++) {
+      try {
+        const response = await fetch(url, options);
+        if ((response.status === 502 || response.status === 504) && i < retries) {
+          console.log(`[재시도 ${i + 1}/${retries}] 서버 일시 오류, 3초 후 재시도...`);
+          await new Promise(r => setTimeout(r, 3000));
+          continue;
+        }
+        return response;
+      } catch (err) {
+        if (i < retries) {
+          console.log(`[재시도 ${i + 1}/${retries}] 네트워크 오류, 3초 후 재시도...`);
+          await new Promise(r => setTimeout(r, 3000));
+          continue;
+        }
+        throw err;
+      }
+    }
+  };
+
   const handleAnalyze = async () => {
     if (!inputText.trim()) return;
     
@@ -168,7 +189,7 @@ const BankExtractor = () => {
         console.error('Failed to load master DB', e);
       }
 
-      const response = await fetch('/api/extract/bank', {
+      const response = await fetchWithRetry('/api/extract/bank', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -177,8 +198,17 @@ const BankExtractor = () => {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || '서버 오류 발생');
+        let errMessage = `서버 오류 (HTTP ${response.status})`;
+        try {
+          const rawText = await response.text();
+          const errorData = JSON.parse(rawText);
+          if (errorData.message) errMessage = errorData.message;
+        } catch (parseErr) {
+          if (response.status === 502 || response.status === 504) {
+            errMessage = '서버가 일시적으로 응답하지 않습니다. 잠시 후 다시 시도해 주세요.';
+          }
+        }
+        throw new Error(errMessage);
       }
 
       const result = await response.json();
@@ -191,7 +221,7 @@ const BankExtractor = () => {
       }
     } catch (err) {
       console.error(err);
-      setErrorMsg(err.message || '서버 통신 오류 처리 불가');
+      setErrorMsg(err.message || '서버 통신 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.');
       setStatus('idle');
     }
   };
